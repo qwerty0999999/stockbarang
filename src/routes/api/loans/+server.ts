@@ -35,9 +35,12 @@ export async function POST({ request, locals }: RequestEvent) {
         data: { quantity: { decrement: parseInt(data.quantity) } }
       });
 
-      // Generate Loan Code unik
-      const count = await tx.loan.count();
-      const code = `PJM-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(count + 1).padStart(4, '0')}`;
+      // Generate Loan Code unik menggunakan timestamp + random
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const code = `PJM-${year}${month}-${random}`;
 
       // Buat peminjaman
       return await tx.loan.create({
