@@ -3,6 +3,10 @@ import { prisma } from '$lib/server/db';
 import XLSX from 'xlsx';
 
 export async function POST({ request, locals }) {
+  if (!locals.user) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file');
@@ -23,7 +27,7 @@ export async function POST({ request, locals }) {
     const createdItems = [];
     const errors = [];
     
-    for (const row of rows) {
+    for (const [index, row] of rows.entries()) {
       const name = String(row['Nama'] || row['name'] || '').trim();
       const price = parseFloat(String(row['Harga'] ?? row['price'] ?? 0));
       const quantity = parseInt(String(row['Stok'] ?? row['quantity'] ?? 0));
@@ -33,7 +37,7 @@ export async function POST({ request, locals }) {
       const categoryName = String(row['Kategori'] || row['category'] || '').trim() || null;
 
       if (!name || price <= 0) {
-        errors.push(`Baris ${rows.indexOf(row) + 2}: Nama dan Harga wajib diisi`);
+        errors.push(`Baris ${index + 2}: Nama dan Harga wajib diisi`);
         continue;
       }
 
@@ -69,7 +73,7 @@ export async function POST({ request, locals }) {
               quantity,
               reference: 'Import Excel',
               notes: `Imported ${rows.length} items`,
-              userId: locals.user?.userId ?? 1
+              userId: locals.user.userId
             }
           });
         }
@@ -88,7 +92,6 @@ export async function POST({ request, locals }) {
       errors: errors.length > 0 ? errors : undefined
     });
   } catch (error: any) {
-    console.error('Import error:', error);
     return json({
       error: error.message || 'Terjadi kesalahan saat import data'
     }, { status: 500 });
