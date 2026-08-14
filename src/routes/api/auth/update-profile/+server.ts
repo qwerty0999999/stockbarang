@@ -13,11 +13,6 @@ export async function POST({ request, locals }: RequestEvent) {
 		return json({ error: 'Username harus diisi' }, { status: 400 });
 	}
 
-	const user = await prisma.user.findUnique({ where: { id: locals.user.userId } });
-	if (user?.role !== 'admin') {
-		return json({ error: 'Hanya admin yang dapat mengubah username' }, { status: 403 });
-	}
-
 	const existingUser = await prisma.user.findFirst({
 		where: {
 			username,
