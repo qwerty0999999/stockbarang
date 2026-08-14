@@ -16,13 +16,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return new Response('Redirect', { status: 303, headers: { Location: '/login' } });
 	}
 
-	// Protect /api/inventory API routes
-	if (event.url.pathname.startsWith('/api/inventory') && !event.locals.user) {
-		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+	// Protect all /api/* routes except /api/auth/*
+	if (event.url.pathname.startsWith('/api/') && !event.url.pathname.startsWith('/api/auth/')) {
+		if (!event.locals.user) {
+			return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+		}
 	}
 
 	// Admin-only: /api/admin routes
-	if (event.url.pathname.startsWith('/api/admin') && (!event.locals.user || !['admin', 'dev'].includes(event.locals.user.role))) {
+	if (event.url.pathname.startsWith('/api/admin') && !['admin', 'dev'].includes(event.locals.user?.role ?? '')) {
 		return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
 	}
 
