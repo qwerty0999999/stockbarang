@@ -21,7 +21,7 @@ if (existing) {
 
 const hashedPassword = await bcrypt.hash(password, 10);
 const user = await prisma.user.create({
-    data: { username, password: hashedPassword, role: 'staff' }
+    data: { username, password: hashedPassword, role: 'manajemen' }
 });
 
 		return new Response(JSON.stringify({ message: 'Registrasi berhasil', userId: user.id }), { status: 201 });
