@@ -1,11 +1,11 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
   import JsBarcode from 'jsbarcode';
   import QRCode from 'qrcode';
 
-  let { value, type = 'barcode', label = '' } = $props();
+  let { value, type = 'barcode', label = '' }: { value: string, type?: 'barcode'|'qrcode', label?: string } = $props();
 
-  let canvas;
+  let canvas: HTMLCanvasElement;
   let imgUrl = $state('');
 
   onMount(async () => {

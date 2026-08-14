@@ -1,11 +1,12 @@
-<script>
-	import { invalidateAll } from '$app/navigation';
+<script lang="ts">
 	import { page } from '$app/stores';
+	import { invalidateAll } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 
 	let { data } = $props();
-	let transactions = $state(data.transactions);
-	let items = data.items;
-	let suppliers = data.suppliers || [];
+	let transactions = $derived(data.transactions);
+	let items = $derived(data.items);
+	let suppliers = $derived(data.suppliers || []);
 	
 	let showModal = $state(false);
 	let loading = $state(false);
@@ -22,7 +23,7 @@
 		showModal = true;
 	}
 
-	async function save(e) {
+	async function save(e: Event) {
 		e.preventDefault();
 		loading = true;
 		error = '';
@@ -44,14 +45,15 @@
 	}
 
 	let filtered = $derived(
-		transactions.filter((t) => {
+		transactions.filter((t: any) => {
 			const matchName = t.item?.name.toLowerCase().includes(search.toLowerCase());
 			const matchType = t.type === activeType;
 			return matchName && matchType;
 		})
 	);
 
-	function formatDate(d) {
+	function formatDate(d: string | Date | null) {
+		if (!d) return '-';
 		return new Date(d).toLocaleDateString('id-ID', { 
 			day: '2-digit', month: 'short', year: 'numeric' 
 		});
@@ -154,7 +156,7 @@
 		<div class="bg-white rounded-none shadow-xl w-full max-w-md overflow-hidden">
 			<div class="bg-[#3C8DBC] px-4 py-3 flex items-center justify-between text-white">
 				<h4 class="font-normal">Catat Barang {activeType === 'MASUK' ? 'Masuk' : 'Keluar'}</h4>
-				<button type="button" onclick={() => showModal = false} class="text-white hover:text-gray-200">
+				<button type="button" aria-label="Close" onclick={() => showModal = false} class="text-white hover:text-gray-200">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
 				</button>
 			</div>

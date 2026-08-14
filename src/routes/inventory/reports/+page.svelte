@@ -1,16 +1,16 @@
-<script>
-  import { jsPDF } from "jspdf";
-  import autoTable from "jspdf-autotable";
-  import * as XLSX from "xlsx";
+<script lang="ts">
+  import { jsPDF } from 'jspdf';
+  import autoTable from 'jspdf-autotable';
+  import * as XLSX from 'xlsx';
 
   let { data } = $props();
   let activeTab = $state('items');
 
-  function formatRupiah(n) {
+  function formatRupiah(n: number) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
   }
 
-  function formatDate(d) {
+  function formatDate(d: string | Date | null) {
     if (!d) return '-';
     return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
   }
@@ -22,7 +22,7 @@
 
   // Mengambil data terfilter (Hanya memfilter di sisi client dari data.transactions)
   let filteredTransactions = $derived(
-    data.transactions.filter(t => {
+    data.transactions.filter((t: any) => {
       let matchJenis = true;
       if (filterJenis === 'Barang Masuk') matchJenis = t.type === 'MASUK';
       else if (filterJenis === 'Barang Keluar') matchJenis = t.type === 'KELUAR';
@@ -45,7 +45,7 @@
     doc.setFontSize(10);
     doc.text(`Dicetak tanggal: ${formatDate(new Date())}`, 14, 22);
 
-    const tableData = data.items.map((i, index) => [
+    const tableData = data.items.map((i: any, index: number) => [
       index + 1,
       i.sku || '-',
       i.name,
@@ -68,7 +68,7 @@
     const win = window.open('', '_blank');
     if(!win) return;
     let tableRows = '';
-    data.items.forEach((i, idx) => {
+    data.items.forEach((i: any, idx: number) => {
       tableRows += `<tr>
         <td style="border:1px solid #ddd; padding:8px; text-align:center;">${idx+1}</td>
         <td style="border:1px solid #ddd; padding:8px;">${i.sku || '-'}</td>
@@ -117,7 +117,7 @@
     infoY += 6;
     doc.text(`Dicetak tanggal: ${formatDate(new Date())}`, 14, infoY);
 
-    const tableData = filteredTransactions.map((t, index) => [
+    const tableData = filteredTransactions.map((t: any, index: number) => [
       index + 1,
       t.item.name,
       formatDate(t.createdAt),
@@ -139,7 +139,7 @@
     const win = window.open('', '_blank');
     if(!win) return;
     let tableRows = '';
-    filteredTransactions.forEach((t, idx) => {
+    filteredTransactions.forEach((t: any, idx: number) => {
       tableRows += `<tr>
         <td style="border:1px solid #ddd; padding:8px; text-align:center;">${idx+1}</td>
         <td style="border:1px solid #ddd; padding:8px; font-weight:bold;">${t.item.name}</td>
@@ -207,16 +207,16 @@
       <div class="px-4 py-3 border-b border-gray-100"><h3 class="font-normal text-base">Filter Laporan</h3></div>
       <div class="p-4 space-y-4">
         <div>
-          <label class="block text-sm font-bold mb-1">Mulai Tanggal</label>
-          <input type="date" bind:value={filterMulai} class="w-full max-w-sm border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm" />
+          <label class="block text-sm font-bold mb-1" for="filterMulai">Mulai Tanggal</label>
+          <input id="filterMulai" type="date" bind:value={filterMulai} class="w-full max-w-sm border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm" />
         </div>
         <div>
-          <label class="block text-sm font-bold mb-1">Sampai Tanggal</label>
-          <input type="date" bind:value={filterSampai} class="w-full max-w-sm border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm" />
+          <label class="block text-sm font-bold mb-1" for="filterSampai">Sampai Tanggal</label>
+          <input id="filterSampai" type="date" bind:value={filterSampai} class="w-full max-w-sm border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm" />
         </div>
         <div>
-          <label class="block text-sm font-bold mb-1">Laporan</label>
-          <select bind:value={filterJenis} class="w-full max-w-sm border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm">
+          <label class="block text-sm font-bold mb-1" for="filterJenis">Laporan</label>
+          <select id="filterJenis" bind:value={filterJenis} class="w-full max-w-sm border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm">
             <option value="Semua">Semua Transaksi</option>
             <option value="Barang Masuk">Barang Masuk</option>
             <option value="Barang Keluar">Barang Keluar</option>

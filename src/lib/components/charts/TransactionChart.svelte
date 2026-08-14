@@ -1,21 +1,21 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
   import { Chart, registerables } from 'chart.js';
 
   Chart.register(...registerables);
 
-  let { transactions, title = 'Aktivitas Transaksi' } = $props();
+  let { transactions, title = 'Aktivitas Transaksi' }: { transactions: any[], title?: string } = $props();
 
-  let canvas;
-  let chart = null;
+  let canvas: HTMLCanvasElement;
+  let chart: any = null;
 
   $effect(() => {
     if (!canvas || !transactions || transactions.length === 0) return;
 
     const last7 = transactions.slice(0, 7).reverse();
-    const labels = last7.map(t => new Date(t.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }));
-    const masuk = last7.map(t => t.type === 'MASUK' ? t.quantity : 0);
-    const keluar = last7.map(t => t.type === 'KELUAR' ? t.quantity : 0);
+    const labels = last7.map((t: any) => new Date(t.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }));
+    const masuk = last7.map((t: any) => t.type === 'MASUK' ? t.quantity : 0);
+    const keluar = last7.map((t: any) => t.type === 'KELUAR' ? t.quantity : 0);
 
     if (chart) {
       chart.destroy();

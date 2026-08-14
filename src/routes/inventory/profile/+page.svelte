@@ -1,8 +1,8 @@
-<script>
+<script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
-	let user = $state(data.user);
+	let user = $derived(data.user);
 
 	let showChangePassword = $state(false);
 	let showEditProfile = $state(false);
@@ -15,7 +15,7 @@
 	let errorProfile = $state('');
 	let avatarInput;
 
-	let profileForm = $state({
+	let profileForm = $derived({
 		username: user?.username || ''
 	});
 
@@ -25,7 +25,7 @@
 		confirmPassword: ''
 	});
 
-	async function updateProfile(e) {
+	async function updateProfile(e: Event) {
 		e.preventDefault();
 		loadingProfile = true;
 		errorProfile = '';
@@ -55,7 +55,7 @@
 		setTimeout(() => { messageProfile = ''; }, 3000);
 	}
 
-	async function changePassword(e) {
+	async function changePassword(e: Event) {
 		e.preventDefault();
 		loading = true;
 		error = '';
@@ -95,8 +95,9 @@
 		setTimeout(() => { message = ''; }, 3000);
 	}
 
-	async function handleAvatarUpload(e) {
-		const file = e.target.files?.[0];
+	async function handleAvatarUpload(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const file = target.files?.[0];
 		if (!file) return;
 
 		loadingAvatar = true;
@@ -124,7 +125,7 @@
 		await invalidateAll();
 	}
 
-	function formatDate(d) {
+	function formatDate(d: string | Date | null) {
 		if (!d) return '-';
 		return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
 	}
@@ -184,7 +185,7 @@
 					</div>
 					<div class="flex justify-between">
 						<span class="text-gray-500">Bergabung</span>
-						<span class="font-medium text-gray-700">{formatDate(user?.createdAt)}</span>
+						<span class="font-medium text-gray-700">{formatDate(user?.createdAt || null)}</span>
 					</div>
 				</div>
 			</div>

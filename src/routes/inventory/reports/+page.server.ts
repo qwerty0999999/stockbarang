@@ -11,7 +11,8 @@ export const load = async () => {
   const transactions = await prisma.transaction.findMany({
     orderBy: { createdAt: 'desc' },
     include: {
-      item: true
+      item: true,
+      supplier: true
     }
   });
 

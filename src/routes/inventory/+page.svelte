@@ -160,8 +160,8 @@
 						<span class="info-value">: {data.user?.username ?? '—'}</span>
 					</div>
 					<div class="info-row">
-						<span class="info-label">User ID</span>
-						<span class="info-value">: #{data.user?.id ?? '—'}</span>
+						<span class="info-label">Role</span>
+						<span class="info-value">: {data.user?.role ?? '—'}</span>
 					</div>
 					<div class="info-row">
 						<span class="info-label">Level Hak Akses</span>
@@ -313,6 +313,7 @@
 		/* Clamp label to 2 lines max so tall labels don't break layout */
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 		max-width: calc(100% - 70px); /* keep clear of icon */

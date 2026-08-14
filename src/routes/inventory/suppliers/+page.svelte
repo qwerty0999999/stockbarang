@@ -1,12 +1,12 @@
-<script>
+<script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { jsPDF } from 'jspdf';
 	import autoTable from 'jspdf-autotable';
 
 	let { data } = $props();
-	let suppliers = $state(data.suppliers);
+	let suppliers = $derived(data.suppliers);
 	let showModal = $state(false);
-	let editSupplier = $state(null);
+	let editSupplier: any = $state(null);
 	let loading = $state(false);
 	let error = $state('');
 	let search = $state('');
@@ -20,7 +20,7 @@
 		showModal = true;
 	}
 
-	function openEdit(supplier) {
+	function openEdit(supplier: any) {
 		editSupplier = supplier;
 		form = {
 			name: supplier.name,
@@ -32,7 +32,7 @@
 		showModal = true;
 	}
 
-	async function save(e) {
+	async function save(e: Event) {
 		e.preventDefault();
 		loading = true;
 		error = '';
@@ -57,7 +57,7 @@
 		suppliers = data.suppliers;
 	}
 
-	async function deleteSupplier(id) {
+	async function deleteSupplier(id: number) {
 		if (!confirm('Hapus supplier ini?')) return;
 		const res = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });
 		const d = await res.json();
@@ -70,7 +70,7 @@
 	}
 
 	let filtered = $derived(
-		suppliers.filter((s) =>
+		suppliers.filter((s: any) =>
 			s.name.toLowerCase().includes(search.toLowerCase()) ||
 			(s.address && s.address.toLowerCase().includes(search.toLowerCase())) ||
 			(s.phone && s.phone.toLowerCase().includes(search.toLowerCase()))
@@ -84,7 +84,7 @@
 		doc.setFontSize(10);
 		doc.text(`Dicetak tanggal: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
 
-		const tableData = filtered.map((s, idx) => [
+		const tableData = filtered.map((s: any, idx: number) => [
 			idx + 1,
 			s.name,
 			s.address || '-',
@@ -107,7 +107,7 @@
 		if (!printWindow) return;
 
 		let tableRows = '';
-		filtered.forEach((s, idx) => {
+		filtered.forEach((s: any, idx: number) => {
 			tableRows += `
 				<tr>
 					<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${idx + 1}</td>
@@ -273,7 +273,7 @@
 		<div class="bg-white rounded-none shadow-xl w-full max-w-md overflow-hidden">
 			<div class="bg-[#3C8DBC] px-4 py-3 flex items-center justify-between text-white">
 				<h4 class="font-normal">{editSupplier ? 'Edit Suplier' : 'Tambah Suplier Baru'}</h4>
-				<button type="button" onclick={() => showModal = false} class="text-white hover:text-gray-200">
+				<button type="button" aria-label="Close" onclick={() => showModal = false} class="text-white hover:text-gray-200">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
 				</button>
 			</div>

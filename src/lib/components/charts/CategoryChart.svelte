@@ -1,19 +1,19 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
   import { Chart, registerables } from 'chart.js';
 
   Chart.register(...registerables);
 
-  let { data, title = 'Stok per Kategori' } = $props();
+  let { data, title = 'Stok per Kategori' }: { data: any[], title?: string } = $props();
 
-  let canvas;
-  let chart = null;
+  let canvas: HTMLCanvasElement;
+  let chart: any = null;
 
   $effect(() => {
     if (!canvas || !data || data.length === 0) return;
 
-    const labels = data.map(d => d.name || 'Uncategorized');
-    const stocks = data.map(d => d.totalStock || 0);
+    const labels = data.map((d: any) => d.name || 'Uncategorized');
+    const stocks = data.map((d: any) => d.totalStock || 0);
 
     if (chart) chart.destroy();
 
