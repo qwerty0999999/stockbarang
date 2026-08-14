@@ -1,0 +1,1 @@
+- [ ] Modify inventory-app/public/js/scripts.js to send login request via fetch and redirect to index.html on success

@@ -1,0 +1,149 @@
+<script lang="ts">
+	import type { PageData } from './$types';
+
+	interface Props {
+		data: PageData;
+	}
+
+	let { data = $bindable() }: Props = $props();
+
+	const widgets = $derived([
+		{
+			label: 'Model Barang',
+			value: data.stats.totalItems,
+			icon: 'M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z',
+			iconBg: 'bg-green-500',
+			href: '/inventory/items'
+		},
+		{
+			label: 'Pengguna',
+			value: data.stats.totalUsers,
+			icon: 'M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z',
+			iconBg: 'bg-yellow-400',
+			href: '/inventory/admin'
+		},
+		{
+			label: 'Suplier',
+			value: data.stats.totalSuppliers,
+			icon: 'M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z',
+			iconBg: 'bg-red-500',
+			href: '/inventory/suppliers'
+		},
+		{
+			label: 'Transaksi Peminjaman',
+			value: data.stats.totalLoans,
+			icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+			iconBg: 'bg-sky-400',
+			href: '/inventory/peminjaman'
+		},
+		{
+			label: 'Total Barang Masuk',
+			value: data.stats.totalInItems,
+			icon: 'M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z',
+			iconBg: 'bg-blue-600',
+			href: '/inventory/transactions?type=MASUK'
+		},
+		{
+			label: 'Total Barang Keluar',
+			value: data.stats.totalOutItems,
+			icon: 'M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z',
+			iconBg: 'bg-purple-500',
+			href: '/inventory/transactions?type=KELUAR'
+		},
+		{
+			label: 'Total Transaksi Barang Masuk',
+			value: data.stats.countInTx,
+			icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+			iconBg: 'bg-orange-500',
+			href: '/inventory/transactions?type=MASUK'
+		},
+		{
+			label: 'Total Transaksi Barang Keluar',
+			value: data.stats.countOutTx,
+			icon: 'M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+			iconBg: 'bg-blue-400',
+			href: '/inventory/transactions?type=KELUAR'
+		},
+		{
+			label: 'Peminjaman Dikembalikan',
+			value: data.stats.returnedLoans,
+			icon: 'M5 13l4 4L19 7',
+			iconBg: 'bg-green-600',
+			href: '/inventory/peminjaman'
+		},
+		{
+			label: 'Peminjaman Belum Dikembalikan',
+			value: data.stats.pendingLoans,
+			icon: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+			iconBg: 'bg-red-600',
+			href: '/inventory/peminjaman'
+		}
+	]);
+
+	const roleLabel = $derived(
+		data.user?.role === 'admin' ? 'ADMIN' : (data.user?.role ?? '').toUpperCase()
+	);
+</script>
+
+<svelte:head><title>Dashboard – Control panel</title></svelte:head>
+
+<div class="p-4">
+	<!-- Title + Breadcrumb -->
+	<div class="flex items-center justify-between mb-6">
+		<div>
+			<h1 class="text-2xl font-bold text-gray-800">Dashboard <span class="font-normal text-gray-500">Control panel</span></h1>
+		</div>
+		<ol class="flex items-center text-sm text-gray-500">
+			<li><a href="/inventory" class="hover:text-[#3c8dbc]">Home</a></li>
+			<li class="mx-2">/</li>
+			<li class="text-gray-800">Dashboard</li>
+		</ol>
+	</div>
+
+	<!-- Widgets -->
+	<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+		{#each widgets as w (w.label)}
+			<a href={w.href} class="group bg-white rounded-lg shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+				<div class="p-4 flex items-center justify-between">
+					<div class="text-right">
+						<p class="text-2xl font-bold text-gray-800 leading-none">{w.value}</p>
+						<p class="text-[10px] font-medium text-gray-500 mt-1 uppercase tracking-wider">{w.label}</p>
+					</div>
+					<div class="w-12 h-12 rounded-lg {w.iconBg} flex items-center justify-center text-white shrink-0">
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d={w.icon} />
+						</svg>
+					</div>
+				</div>
+				<div class="px-4 py-2 bg-gray-50 border-t border-gray-100 text-[11px] group-hover:bg-gray-100 transition-colors">
+					<span class="text-gray-500 flex items-center gap-1">
+						More info <span class="text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
+					</span>
+				</div>
+			</a>
+		{/each}
+	</div>
+
+	<!-- Sesi Pengguna -->
+	<div class="bg-white rounded-lg shadow-sm max-w-md">
+		<div class="px-5 py-4 border-b border-gray-100">
+			<h2 class="font-semibold text-gray-800">Informasi Akun Aktif</h2>
+		</div>
+		<div class="p-5 space-y-4">
+			<div class="flex items-center">
+				<span class="w-36 text-sm text-gray-500 shrink-0">Nama</span>
+				<span class="text-sm font-medium text-gray-800">: {data.user?.username ?? '—'}</span>
+			</div>
+			<div class="flex items-center">
+				<span class="w-36 text-sm text-gray-500 shrink-0">Username</span>
+				<span class="text-sm font-medium text-gray-800">: {data.user?.email ?? '—'}</span>
+			</div>
+			<div class="flex items-center">
+				<span class="w-36 text-sm text-gray-500 shrink-0">Level Hak Akses</span>
+				<span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold uppercase {data.user?.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}">
+					{roleLabel}
+				</span>
+			</div>
+		</div>
+	</div>
+</div>
