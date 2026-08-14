@@ -1,11 +1,11 @@
-<script>
+<script lang="ts">
   let { data } = $props();
-  let users = $state(data.users);
-  let items = $state(data.items);
+  let users = $derived(data.users);
+  let items = $derived(data.items);
   let loading = $state(false);
   let message = $state('');
 
-  async function toggleRole(userId, currentRole) {
+  async function toggleRole(userId: number, currentRole: string) {
     const newRole = currentRole === 'admin' ? 'manajemen' : 'admin';
     if (!confirm(`Ubah role user menjadi ${newRole}?`)) return;
     
@@ -32,7 +32,7 @@
     }
   }
 
-  function formatDate(d) {
+  function formatDate(d: string | Date) {
     return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 </script>

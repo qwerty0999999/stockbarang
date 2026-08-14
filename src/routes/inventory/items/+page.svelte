@@ -1,14 +1,14 @@
-<script>
+<script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
-	let items = $state(data.items);
+	let items = $derived(data.items);
 	let showModal = $state(false);
-	let editItem = $state(null);
+	let editItem: any = $state(null);
 	let loading = $state(false);
 	let error = $state('');
 	let search = $state('');
-	let selectedIds = $state([]);
+	let selectedIds: number[] = $state([]);
 	let showBatchModal = $state(false);
 	let batchQuantity = $state(0);
 	let batchType = $state('add');
@@ -24,7 +24,7 @@
 		showModal = true;
 	}
 
-	function openEdit(item) {
+	function openEdit(item: any) {
 		editItem = item;
 		form = { 
 			name: item.name, 
@@ -39,7 +39,7 @@
 		showModal = true;
 	}
 
-	async function save(e) {
+	async function save(e: Event) {
 		e.preventDefault();
 		loading = true;
 		error = '';
@@ -58,7 +58,7 @@
 		items = data.items;
 	}
 
-	async function deleteItem(id) {
+	async function deleteItem(id: number) {
 		if (!confirm('Hapus barang ini?')) return;
 		await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
 		await invalidateAll();
@@ -66,7 +66,7 @@
 	}
 
 	let filtered = $derived(
-		items.filter((i) => 
+		items.filter((i: any) => 
 			i.name.toLowerCase().includes(search.toLowerCase()) ||
 			(i.sku && i.sku.toLowerCase().includes(search.toLowerCase())) ||
 			(i.location && i.location.toLowerCase().includes(search.toLowerCase())) ||
@@ -74,7 +74,7 @@
 		)
 	);
 
-	function formatRupiah(n) {
+	function formatRupiah(n: number) {
 		return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 	}
 </script>
@@ -140,8 +140,9 @@
 								<input type="checkbox" 
 									checked={selectedIds.length === filtered.length && filtered.length > 0}
 									onchange={(e) => {
-									const checked = e.target.checked;
-									selectedIds = checked ? filtered.map((i) => i.id) : [];
+									const target = e.target as HTMLInputElement;
+									const checked = target.checked;
+									selectedIds = checked ? filtered.map((i: any) => i.id) : [];
 									}}
 								/>
 							</th>
@@ -228,7 +229,7 @@
 		<div class="bg-white rounded-none shadow-xl w-full max-w-lg overflow-hidden">
 			<div class="bg-[#3C8DBC] px-4 py-3 flex items-center justify-between text-white">
 				<h4 class="font-normal">{editItem ? 'Edit Barang' : 'Tambah Barang'}</h4>
-				<button type="button" onclick={() => showModal = false} class="text-white hover:text-gray-200">
+				<button type="button" aria-label="Close" onclick={() => showModal = false} class="text-white hover:text-gray-200">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
 				</button>
 			</div>
@@ -285,7 +286,7 @@
 		<div class="bg-white rounded-none shadow-xl w-full max-w-sm overflow-hidden">
 			<div class="bg-[#F39C12] px-4 py-3 flex items-center justify-between text-white">
 				<h4 class="font-normal">Update Stok ({selectedIds.length} Barang)</h4>
-				<button type="button" onclick={() => { showBatchModal = false; batchError = ''; }} class="text-white hover:text-gray-200">
+				<button type="button" aria-label="Close" onclick={() => { showBatchModal = false; batchError = ''; }} class="text-white hover:text-gray-200">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
 				</button>
 			</div>
@@ -294,7 +295,7 @@
 					<div class="bg-red-50 text-red-600 p-2 text-sm border-l-2 border-red-500">{batchError}</div>
 				{/if}
 				<div>
-					<label class="block text-sm font-bold text-gray-700 mb-1">Mode Update</label>
+					<span class="block text-sm font-bold text-gray-700 mb-1">Mode Update</span>
 					<div class="flex gap-4">
 						<label class="flex items-center gap-1.5 text-sm">
 							<input type="radio" bind:group={batchType} value="add" name="bType" /> Tambah (+)

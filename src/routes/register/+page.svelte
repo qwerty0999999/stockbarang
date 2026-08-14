@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { goto } from '$app/navigation';
 
 	let username = $state('');
@@ -7,7 +7,7 @@
 	let error = $state('');
 	let loading = $state(false);
 
-	async function handleRegister(e) {
+	async function handleRegister(e: Event) {
 		e.preventDefault();
 		if (password !== confirm) { error = 'Password tidak cocok'; return; }
 		if (password.length < 6) { error = 'Password minimal 6 karakter'; return; }

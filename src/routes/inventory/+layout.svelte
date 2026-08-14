@@ -131,7 +131,7 @@
 		<header class="h-[50px] bg-[#3C8DBC] flex items-center justify-between text-white shrink-0 shadow-md">
 			<!-- Toggle and App Name -->
 			<div class="flex items-center">
-				<button class="p-4 hover:bg-[#367FA9] transition-colors h-[50px] flex items-center justify-center">
+				<button aria-label="Toggle Menu" class="p-4 hover:bg-[#367FA9] transition-colors h-[50px] flex items-center justify-center">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
 					</svg>

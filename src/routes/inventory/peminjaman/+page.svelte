@@ -1,11 +1,11 @@
-<script>
+<script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { jsPDF } from 'jspdf';
 	import autoTable from 'jspdf-autotable';
 
 	let { data } = $props();
-	let loans = $state(data.loans);
-	let items = data.items;
+	let loans = $derived(data.loans);
+	let items = $derived(data.items);
 	let showModal = $state(false);
 	let loading = $state(false);
 	let error = $state('');
@@ -31,7 +31,7 @@
 		showModal = true;
 	}
 
-	async function save(e) {
+	async function save(e: Event) {
 		e.preventDefault();
 		loading = true;
 		error = '';
@@ -54,7 +54,7 @@
 		loans = data.loans;
 	}
 
-	async function kembalikan(id) {
+	async function kembalikan(id: number) {
 		if (!confirm('Tandai barang peminjaman ini telah dikembalikan?')) return;
 		const res = await fetch(`/api/loans/${id}`, {
 			method: 'PATCH',
@@ -70,7 +70,7 @@
 		loans = data.loans;
 	}
 
-	async function hapus(id) {
+	async function hapus(id: number) {
 		if (!confirm('Hapus peminjaman ini? Jika status masih DIPINJAM, stok akan otomatis dikembalikan.')) return;
 		const res = await fetch(`/api/loans/${id}`, { method: 'DELETE' });
 		const d = await res.json();
@@ -83,14 +83,14 @@
 	}
 
 	let filtered = $derived(
-		loans.filter((l) =>
+		loans.filter((l: any) =>
 			l.borrowerName.toLowerCase().includes(search.toLowerCase()) ||
 			l.item.name.toLowerCase().includes(search.toLowerCase()) ||
 			l.loanCode.toLowerCase().includes(search.toLowerCase())
 		)
 	);
 
-	function formatDate(d) {
+	function formatDate(d: string | Date | null) {
 		if (!d) return '-';
 		return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 	}
@@ -102,7 +102,7 @@
 		doc.setFontSize(10);
 		doc.text(`Dicetak tanggal: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
 
-		const tableData = filtered.map((l, idx) => [
+		const tableData = filtered.map((l: any, idx: number) => [
 			idx + 1,
 			l.loanCode,
 			l.borrowerName,
@@ -128,7 +128,7 @@
 		if (!printWindow) return;
 
 		let tableRows = '';
-		filtered.forEach((l, idx) => {
+		filtered.forEach((l: any, idx: number) => {
 			tableRows += `
 				<tr>
 					<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${idx + 1}</td>
@@ -313,7 +313,7 @@
 		<div class="bg-white rounded-none shadow-xl w-full max-w-md overflow-hidden">
 			<div class="bg-[#3C8DBC] px-4 py-3 flex items-center justify-between text-white">
 				<h4 class="font-normal">Tambah Peminjaman Baru</h4>
-				<button type="button" onclick={() => showModal = false} class="text-white hover:text-gray-200">
+				<button type="button" aria-label="Close" onclick={() => showModal = false} class="text-white hover:text-gray-200">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
 				</button>
 			</div>
