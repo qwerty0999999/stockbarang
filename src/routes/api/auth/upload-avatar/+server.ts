@@ -35,7 +35,13 @@ export async function POST({ request, locals }: RequestEvent) {
 	}
 
 	// Generate unique filename
-	const ext = file.name.split('.').pop();
+	const mimeToExt: Record<string, string> = {
+		'image/jpeg': 'jpg',
+		'image/png': 'png',
+		'image/gif': 'gif',
+		'image/webp': 'webp'
+	};
+	const ext = mimeToExt[file.type] || 'bin';
 	const filename = `${randomUUID()}.${ext}`;
 	const filePath = join(AVATAR_DIR, filename);
 

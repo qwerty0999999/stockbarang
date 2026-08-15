@@ -44,3 +44,34 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
     return json({ error: message }, { status: 500 });
   }
 };
+
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+  if (!locals.user || !['admin', 'dev'].includes(locals.user.role)) {
+    return json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const id = Number(params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return json({ error: 'ID tidak valid' }, { status: 400 });
+  }
+
+  try {
+    const targetUser = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+    if (!targetUser) {
+      return json({ error: 'User tidak ditemukan' }, { status: 404 });
+    }
+    
+    if (targetUser.role === 'dev' && locals.user.role !== 'dev') {
+      return json({ error: 'Hanya role DEV yang dapat menghapus user DEV' }, { status: 403 });
+    }
+
+    await prisma.user.delete({
+      where: { id }
+    });
+
+    return json({ success: true, message: 'User berhasil dihapus' }, { status: 200 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Terjadi kesalahan server';
+    return json({ error: message }, { status: 500 });
+  }
+};

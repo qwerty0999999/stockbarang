@@ -18,43 +18,37 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
     }
 
     const parsedQuantity = Number(quantity);
-    const operation = type === 'set' ? 'set' : 'add';
+    const isSetOperation = type === 'set';
 
-    const results = await prisma.$transaction(async (tx) => {
-      const updatedItems = [];
-      for (const id of ids) {
-        const item = await tx.item.findUnique({ where: { id } });
-        if (!item) continue;
+    const items = await prisma.item.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, quantity: true }
+    });
 
-        let newQuantity;
-        if (operation === 'set') {
-          newQuantity = parsedQuantity;
-        } else {
-          newQuantity = item.quantity + parsedQuantity;
-        }
+    const validIds = items.map(i => i.id);
+    const transactionType = isSetOperation ? 'ADJUSTMENT' : (parsedQuantity >= 0 ? 'MASUK' : 'KELUAR');
 
-        const updated = await tx.item.update({
-          where: { id },
+    await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const newQuantity = isSetOperation ? parsedQuantity : item.quantity + parsedQuantity;
+        await tx.item.update({
+          where: { id: item.id },
           data: { quantity: newQuantity }
         });
-
         await tx.transaction.create({
           data: {
-            itemId: id,
-            type: operation === 'set' ? 'SET' : parsedQuantity >= 0 ? 'MASUK' : 'KELUAR',
-            quantity: operation === 'set' ? parsedQuantity : parsedQuantity,
+            itemId: item.id,
+            type: transactionType,
+            quantity: parsedQuantity,
             reference: 'Batch Update',
-            notes: `Batch ${operation} ${parsedQuantity}`,
+            notes: `Batch ${isSetOperation ? 'set' : 'add'} ${parsedQuantity}`,
             userId: locals.user!.userId
           }
         });
-
-        updatedItems.push(updated);
       }
-      return updatedItems;
     });
 
-    return new Response(JSON.stringify({ success: true, count: results.length }), { status: 200 });
+    return new Response(JSON.stringify({ success: true, count: validIds.length }), { status: 200 });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: 'Terjadi kesalahan internal' }), { status: 500 });
   }

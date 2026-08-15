@@ -1,7 +1,10 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ locals }) => {
+	if (!locals.user) {
+		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+	}
 	const transactions = await prisma.transaction.findMany({
 		include: { item: true },
 		orderBy: { createdAt: 'desc' }

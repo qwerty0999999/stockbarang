@@ -1,9 +1,27 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
 
-export const GET: RequestHandler = async () => {
-	const items = await prisma.item.findMany({ orderBy: { createdAt: 'desc' } });
-	return new Response(JSON.stringify(items), { status: 200 });
+export const GET: RequestHandler = async ({ url }) => {
+  const page = Number(url.searchParams.get('page')) || 1;
+  const limit = Number(url.searchParams.get('limit')) || 20;
+  const skip = (page - 1) * limit;
+
+  const items = await prisma.item.findMany({
+    orderBy: { createdAt: 'desc' },
+    skip,
+    take: limit
+  });
+
+  const total = await prisma.item.count();
+  return new Response(JSON.stringify({
+    items,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  }), { status: 200 });
 };
 
 export const POST: RequestHandler = async ({ request }) => {

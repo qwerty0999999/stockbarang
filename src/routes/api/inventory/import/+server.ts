@@ -24,9 +24,25 @@ export async function POST({ request, locals }) {
       return json({ error: 'File kosong atau format tidak valid' }, { status: 400 });
     }
 
-    const createdItems = [];
     const errors = [];
-    
+    const categoryNames = [...new Set(
+      rows.map(row => String(row['Kategori'] || row['category'] || '').trim())
+          .filter(Boolean)
+    )];
+
+    const categories = await Promise.all(
+      categoryNames.map(name =>
+        prisma.category.upsert({
+          where: { name },
+          update: {},
+          create: { name }
+        })
+      )
+    );
+
+    const categoryMap = Object.fromEntries(categories.map(c => [c.name, c.id]));
+
+    const validItemsData = [];
     for (const [index, row] of rows.entries()) {
       const name = String(row['Nama'] || row['name'] || '').trim();
       const price = parseFloat(String(row['Harga'] ?? row['price'] ?? 0));
@@ -41,54 +57,48 @@ export async function POST({ request, locals }) {
         continue;
       }
 
-      let categoryId = undefined;
-      if (categoryName) {
-        const category = await prisma.category.upsert({
-          where: { name: categoryName },
-          update: {},
-          create: { name: categoryName }
-        });
-        categoryId = category.id;
-      }
-
-      const data = {
+      validItemsData.push({
         name,
         sku,
         price,
         quantity,
         minStock,
         location,
-        categoryId,
-      };
+        categoryId: categoryName ? categoryMap[categoryName] : null,
+      });
+    }
 
-      try {
-        const created = await prisma.item.create({ data });
-        createdItems.push(created);
-
-        if (quantity > 0) {
-          await prisma.transaction.create({
-            data: {
-              itemId: created.id,
-              type: 'MASUK',
-              quantity,
-              reference: 'Import Excel',
-              notes: `Imported ${rows.length} items`,
-              userId: locals.user.userId
-            }
-          });
-        }
-      } catch (e: any) {
-        if (e.code === 'P2002') {
-          errors.push(`SKU "${sku}" sudah digunakan`);
-        } else {
-          errors.push(`Gagal import "${name}": ${e.message}`);
-        }
-      }
+    let createdCount = 0;
+    
+    // Process insertions safely
+    for (const data of validItemsData) {
+       try {
+          const created = await prisma.item.create({ data });
+          createdCount++;
+          if (data.quantity > 0) {
+             await prisma.transaction.create({
+                data: {
+                   itemId: created.id,
+                   type: 'MASUK',
+                   quantity: data.quantity,
+                   reference: 'Import Excel',
+                   notes: `Imported items`,
+                   userId: locals.user.userId
+                }
+             });
+          }
+       } catch(e: any) {
+          if (e.code === 'P2002') {
+            errors.push(`SKU "${data.sku}" sudah digunakan`);
+          } else {
+            errors.push(`Gagal import "${data.name}": ${e.message}`);
+          }
+       }
     }
 
     return json({
       success: true,
-      count: createdItems.length,
+      count: createdCount,
       errors: errors.length > 0 ? errors : undefined
     });
   } catch (error: any) {
