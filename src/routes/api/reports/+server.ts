@@ -3,6 +3,7 @@ import { prisma } from '$lib/server/db';
 
 export const GET: RequestHandler = async ({ url }) => {
   const type = url.searchParams.get('type') || 'overview';
+  const format = url.searchParams.get('format') || 'json';
   
   if (type === 'overview') {
     const totalItems = await prisma.item.count();
@@ -33,12 +34,23 @@ export const GET: RequestHandler = async ({ url }) => {
       return acc;
     }, {});
 
-    return new Response(JSON.stringify({
+    const data = {
       totalItems,
       lowStockItems,
       totalValue: totalValue._sum.price || 0,
       dailyStats: Object.values(dailyStats)
-    }), { status: 200 });
+    };
+    if (format === 'csv') {
+      let csv = 'Date,Masuk,Keluar\n';
+      data.dailyStats.forEach((d: any) => {
+        csv += `${d.date},${d.masuk},${d.keluar}\n`;
+      });
+      return new Response(csv, { 
+        status: 200,
+        headers: { 'Content-Type': 'text/csv' }
+      });
+    }
+    return new Response(JSON.stringify(data), { status: 200 });
   }
 
   if (type === 'category') {
@@ -57,6 +69,16 @@ export const GET: RequestHandler = async ({ url }) => {
       totalValue: c.items.reduce((sum, i) => sum + (i.quantity * i.price), 0)
     }));
 
+    if (format === 'csv') {
+      let csv = 'Category,ItemCount,TotalQuantity,TotalValue\n';
+      categoryStats.forEach((c: any) => {
+        csv += `${c.name},${c.itemCount},${c.totalQuantity},${c.totalValue}\n`;
+      });
+      return new Response(csv, { 
+        status: 200,
+        headers: { 'Content-Type': 'text/csv' }
+      });
+    }
     return new Response(JSON.stringify(categoryStats), { status: 200 });
   }
 
@@ -82,6 +104,16 @@ export const GET: RequestHandler = async ({ url }) => {
       include: { item: true, supplier: true }
     });
 
+    if (format === 'csv') {
+      let csv = 'Date,Item,Type,Quantity,Reference,Supplier\n';
+      transactions.forEach((t: any) => {
+        csv += `${new Date(t.createdAt).toISOString().split('T')[0]},${t.item?.name || ''},${t.type},${t.quantity},${t.reference || ''},${t.supplier?.name || ''}\n`;
+      });
+      return new Response(csv, { 
+        status: 200,
+        headers: { 'Content-Type': 'text/csv' }
+      });
+    }
     return new Response(JSON.stringify(transactions), { status: 200 });
   }
 
