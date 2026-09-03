@@ -1,0 +1,16 @@
+node_modules
+.nyc_output
+coverage
+.git
+.github
+.vscode
+.idea
+.env
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+.svelte-kit
+dist
+build
+</content>
