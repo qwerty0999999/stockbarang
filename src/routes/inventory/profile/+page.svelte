@@ -13,10 +13,13 @@
 	let error = $state('');
 	let messageProfile = $state('');
 	let errorProfile = $state('');
-	let avatarInput;
+	let avatarInput: HTMLInputElement | undefined = $state();
 
-	let profileForm = $derived({
-		username: user?.username || ''
+	let profileUsername = $state('');
+	$effect(() => {
+		if (data.user?.username) {
+			profileUsername = data.user.username;
+		}
 	});
 
 	let passwordForm = $state({
@@ -35,7 +38,7 @@
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
-				username: profileForm.username
+				username: profileUsername
 			})
 		});
 
@@ -48,9 +51,6 @@
 		}
 
 		messageProfile = 'Profil berhasil diperbarui!';
-		if (user) {
-			user.username = profileForm.username;
-		}
 		await invalidateAll();
 		setTimeout(() => { messageProfile = ''; }, 3000);
 	}
@@ -119,9 +119,6 @@
 			return;
 		}
 
-		if (user) {
-			user.avatar = data.avatar;
-		}
 		await invalidateAll();
 	}
 
@@ -230,7 +227,7 @@
 							<input 
 								id="username" 
 								type="text" 
-								bind:value={profileForm.username} 
+								bind:value={profileUsername} 
 								required
 								class="w-full max-w-sm border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm"
 							/>

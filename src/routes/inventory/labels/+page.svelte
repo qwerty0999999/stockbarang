@@ -1,5 +1,6 @@
 <script lang="ts">
   import LabelGenerator from '$lib/components/barcode/LabelGenerator.svelte';
+  import { page } from '$app/stores';
 
   let { data } = $props();
 
@@ -10,14 +11,57 @@
   
   let activeValue = $derived(customValue || (selectedItem ? data.items.find((i) => i.id.toString() === selectedItem)?.sku || data.items.find((i) => i.id.toString() === selectedItem)?.id.toString() : ""));
   let activeLabel = $derived(customLabel || (selectedItem ? data.items.find((i) => i.id.toString() === selectedItem)?.name : ""));
+
+  // Batch Printing
+  let selectedIds = $derived($page.url.searchParams.get('ids')?.split(',') || []);
+  let selectedItems = $derived(selectedIds.length > 0 ? data.items.filter(i => selectedIds.includes(i.id.toString())) : []);
 </script>
 
 <div class="space-y-6">
   <div class="flex justify-between items-center">
     <h1 class="text-2xl font-bold text-gray-900">Label & Barcode Generator</h1>
+    {#if selectedItems.length > 0}
+      <a href="/inventory/items" class="text-sm text-blue-600 hover:underline">Kembali ke Data Barang</a>
+    {/if}
   </div>
 
+  {#if selectedItems.length > 0}
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Cetak Massal ({selectedItems.length} Label)</h2>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2">
+            <input type="radio" bind:group={labelType} value="barcode" name="batchType" /> Barcode
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="radio" bind:group={labelType} value="qrcode" name="batchType" /> QR Code
+          </label>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {#each selectedItems as item}
+          <LabelGenerator 
+            value={item.sku || item.id.toString()} 
+            type={labelType} 
+            label={item.name} 
+          />
+        {/each}
+      </div>
+    </div>
+  {/if}
+
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+	{#if loading}
+		<div class="bg-white rounded-lg shadow p-6 space-y-4 animate-pulse">
+			<div class="h-8 bg-gray-200 rounded w-1/3"></div>
+			<div class="h-6 bg-gray-200 rounded w-1/2"></div>
+			<div class="h-6 bg-gray-200 rounded w-1/2"></div>
+			<div class="h-6 bg-gray-200 rounded w-1/2"></div>
+		</div>
+		<div class="bg-gray-50 rounded-lg shadow p-6 border flex flex-col items-center justify-center min-h-[300px] animate-pulse">
+			<div class="h-48 w-48 bg-gray-200 rounded"></div>
+		</div>
+	{:else}
     <div class="bg-white rounded-lg shadow p-6 space-y-4">
       <h2 class="text-lg font-semibold border-b pb-2">Pengaturan Label</h2>
       

@@ -51,7 +51,6 @@
 
 		showModal = false;
 		await invalidateAll();
-		loans = data.loans;
 	}
 
 	async function kembalikan(id: number) {
@@ -67,7 +66,6 @@
 			return;
 		}
 		await invalidateAll();
-		loans = data.loans;
 	}
 
 	async function hapus(id: number) {
@@ -79,7 +77,6 @@
 			return;
 		}
 		await invalidateAll();
-		loans = data.loans;
 	}
 
 	let filtered = $derived(

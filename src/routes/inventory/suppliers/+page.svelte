@@ -54,7 +54,6 @@
 
 		showModal = false;
 		await invalidateAll();
-		suppliers = data.suppliers;
 	}
 
 	async function deleteSupplier(id: number) {
@@ -66,7 +65,6 @@
 			return;
 		}
 		await invalidateAll();
-		suppliers = data.suppliers;
 	}
 
 	let filtered = $derived(

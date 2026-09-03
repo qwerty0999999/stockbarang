@@ -38,6 +38,25 @@
     })
   );
 
+  // --- EXPORT EXCEL STOK ---
+  function exportExcelItems() {
+    const wsData = [
+      ['No', 'SKU', 'Nama Barang', 'Stok', 'Harga Satuan', 'Total Nilai'],
+      ...data.items.map((i: any, index: number) => [
+        index + 1,
+        i.sku || '-',
+        i.name,
+        i.quantity,
+        i.price,
+        i.quantity * i.price
+      ])
+    ];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, "Stok Barang");
+    XLSX.writeFile(wb, "Laporan_Stok_Barang.xlsx");
+  }
+
   // --- EXPORT PDF STOK ---
   function exportPdfItems() {
     const doc = new jsPDF();
@@ -204,6 +223,16 @@
 
   {#if activeTab === 'transactions'}
     <div class="bg-white shadow rounded-none border-t-4 border-[#3C8DBC]">
+	{#if loading}
+		<div class="p-4 space-y-4">
+			<div class="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+			<div class="grid grid-cols-2 gap-4">
+				<div class="h-32 bg-gray-100 rounded animate-pulse"></div>
+				<div class="h-32 bg-gray-100 rounded animate-pulse"></div>
+			</div>
+			<div class="h-64 bg-gray-100 rounded animate-pulse"></div>
+		</div>
+	{:else}
       <div class="px-4 py-3 border-b border-gray-100"><h3 class="font-normal text-base">Filter Laporan</h3></div>
       <div class="p-4 space-y-4">
         <div>
@@ -283,6 +312,9 @@
       <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
         <h3 class="font-normal text-base">Laporan Stok Barang Saat Ini</h3>
         <div class="flex gap-2">
+          <button onclick={exportExcelItems} class="bg-[#217346] hover:bg-[#1a5c38] text-white px-3 py-1.5 text-xs font-semibold rounded-sm flex items-center gap-1">
+            EKSPOR EXCEL
+          </button>
           <button onclick={exportPdfItems} class="bg-[#5CB85C] hover:bg-[#4CAE4C] text-white px-3 py-1.5 text-xs font-semibold rounded-sm flex items-center gap-1">
             CETAK PDF
           </button>

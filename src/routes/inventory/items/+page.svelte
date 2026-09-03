@@ -1,13 +1,41 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
 
 	let { data } = $props();
 	let items = $derived(data.items);
+	let pagination = $derived(data.pagination || { page: 1, limit: 20, total: items.length, totalPages: 1 });
 	let showModal = $state(false);
 	let editItem: any = $state(null);
 	let loading = $state(false);
 	let error = $state('');
 	let search = $state('');
+	$effect(() => {
+		search = data.searchQuery || '';
+	});
+	let searchTimeout: any;
+
+	function handleSearch() {
+		clearTimeout(searchTimeout);
+		searchTimeout = setTimeout(() => {
+			const url = new URL($page.url);
+			if (search) {
+				url.searchParams.set('search', search);
+			} else {
+				url.searchParams.delete('search');
+			}
+			url.searchParams.set('page', '1');
+			goto(url.toString(), { keepFocus: true, noScroll: true });
+		}, 300);
+	}
+
+	function goToPage(p: number) {
+		if (p < 1 || p > pagination.totalPages) return;
+		const url = new URL($page.url);
+		url.searchParams.set('page', p.toString());
+		goto(url.toString(), { noScroll: true });
+	}
+
 	let selectedIds: number[] = $state([]);
 	let showBatchModal = $state(false);
 	let batchQuantity = $state(0);
@@ -55,24 +83,15 @@
 		if (!res.ok) { error = d.error; return; }
 		showModal = false;
 		await invalidateAll();
-		items = data.items;
 	}
 
 	async function deleteItem(id: number) {
 		if (!confirm('Hapus barang ini?')) return;
 		await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
 		await invalidateAll();
-		items = data.items;
 	}
 
-	let filtered = $derived(
-		items.filter((i: any) => 
-			i.name.toLowerCase().includes(search.toLowerCase()) ||
-			(i.sku && i.sku.toLowerCase().includes(search.toLowerCase())) ||
-			(i.location && i.location.toLowerCase().includes(search.toLowerCase())) ||
-			(i.category?.name && i.category.name.toLowerCase().includes(search.toLowerCase()))
-		)
-	);
+	let filtered = $derived(items);
 
 	function formatRupiah(n: number) {
 		return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
@@ -105,35 +124,59 @@
 	<div class="bg-white shadow rounded-none border-t-4 border-[#00C0EF]">
 		<div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
 			<h3 class="font-normal text-gray-800 text-base">Barang</h3>
-			<button onclick={openAdd} class="bg-[#3CA2E0] hover:bg-[#3692CA] text-white px-3 py-1.5 text-xs font-semibold rounded shadow-sm flex items-center gap-1 transition-colors">
-				<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-				</svg>
-				Tambah Barang
-			</button>
+			<div class="flex items-center gap-2">
+				<a href="/inventory/items/print" target="_blank" class="bg-[#607D8B] hover:bg-[#546E7A] text-white px-3 py-1.5 text-xs font-semibold rounded shadow-sm flex items-center gap-1 transition-colors">
+					<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+					</svg>
+					Cetak
+				</a>
+				<button onclick={openAdd} class="bg-[#3CA2E0] hover:bg-[#3692CA] text-white px-3 py-1.5 text-xs font-semibold rounded shadow-sm flex items-center gap-1 transition-colors">
+					<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+					</svg>
+					Tambah Barang
+				</button>
+			</div>
 		</div>
 
 		<div class="p-4">
 			<!-- Search & Batch -->
 			<div class="mb-4 flex flex-wrap gap-3 items-center justify-end">
 				{#if selectedIds.length > 0}
-					<button onclick={() => showBatchModal = true}
-						class="px-3 py-1.5 bg-[#F39C12] hover:bg-[#E08E0B] text-white text-xs font-semibold rounded shadow-sm transition-colors flex items-center gap-1 mr-auto">
-						<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-						</svg>
-						Update Stok ({selectedIds.length})
-					</button>
+					<div class="flex gap-2 mr-auto">
+						<button onclick={() => showBatchModal = true}
+							class="px-3 py-1.5 bg-[#F39C12] hover:bg-[#E08E0B] text-white text-xs font-semibold rounded shadow-sm transition-colors flex items-center gap-1">
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+							</svg>
+							Update Stok ({selectedIds.length})
+						</button>
+						<a href="/inventory/labels?ids={selectedIds.join(',')}"
+							class="px-3 py-1.5 bg-[#00A65A] hover:bg-[#008D4C] text-white text-xs font-semibold rounded shadow-sm transition-colors flex items-center gap-1">
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h10M7 12h10m-5 5h5"/>
+							</svg>
+							Cetak Label ({selectedIds.length})
+						</a>
+					</div>
 				{/if}
 				<div class="flex items-center gap-2">
 					<span class="text-sm font-semibold text-gray-700">Search:</span>
-					<input type="text" bind:value={search} class="border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm w-48" />
+					<input type="text" bind:value={search} oninput={handleSearch} class="border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm w-48" />
 				</div>
 			</div>
 
 			<!-- Table AdminLTE Style -->
-			<div class="overflow-x-auto">
-				<table class="w-full text-sm text-left border border-gray-200">
+<div class="overflow-x-auto">
+					{#if loading && items.length === 0}
+						<div class="space-y-4">
+							{#each Array(5) as _ (i)}
+								<div class="h-12 bg-gray-100 rounded animate-pulse"></div>
+							{/each}
+						</div>
+					{:else}
+						<table class="w-full text-sm text-left border border-gray-200">
 					<thead class="bg-gray-50 border-b border-gray-200 text-gray-700 font-bold uppercase text-xs">
 						<tr>
 							<th class="p-3 border-r border-gray-200 w-10 text-center">
@@ -212,11 +255,11 @@
 			</div>
 			
 			<div class="mt-4 flex justify-between items-center text-sm text-gray-600">
-				<div>Showing 1 to {filtered.length} of {filtered.length} entries</div>
+				<div>Showing {pagination.total > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} entries</div>
 				<div class="flex border border-gray-300 rounded overflow-hidden">
-					<button class="px-3 py-1 bg-white hover:bg-gray-50 text-gray-500 border-r border-gray-300 disabled:opacity-50" disabled>Previous</button>
-					<button class="px-3 py-1 bg-[#3C8DBC] text-white font-medium">1</button>
-					<button class="px-3 py-1 bg-white hover:bg-gray-50 text-gray-500 border-l border-gray-300 disabled:opacity-50" disabled>Next</button>
+					<button type="button" onclick={() => goToPage(pagination.page - 1)} class="px-3 py-1 bg-white hover:bg-gray-50 text-gray-500 border-r border-gray-300 disabled:opacity-50" disabled={pagination.page <= 1}>Previous</button>
+					<span class="px-3 py-1 bg-[#3C8DBC] text-white font-medium">{pagination.page}</span>
+					<button type="button" onclick={() => goToPage(pagination.page + 1)} class="px-3 py-1 bg-white hover:bg-gray-50 text-gray-500 border-l border-gray-300 disabled:opacity-50" disabled={pagination.page >= pagination.totalPages}>Next</button>
 				</div>
 			</div>
 		</div>
@@ -271,9 +314,15 @@
 				</div>
 				<div class="flex justify-end gap-2 pt-3">
 					<button type="button" onclick={() => showModal = false} class="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 text-sm font-medium rounded-sm">Batal</button>
-					<button type="submit" disabled={loading} class="px-4 py-2 bg-[#3C8DBC] hover:bg-[#367FA9] text-white text-sm font-medium rounded-sm disabled:opacity-70">
-						{loading ? 'Menyimpan...' : 'Simpan'}
-					</button>
+<button type="submit" disabled={loading} class="px-4 py-2 bg-[#3C8DBC] hover:bg-[#367FA9] text-white text-sm font-medium rounded-sm disabled:opacity-70 flex items-center gap-2">
+	{#if loading}
+		<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+			<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+			<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+		</svg>
+	{/if}
+	{loading ? 'Menyimpan...' : 'Simpan'}
+</button>
 				</div>
 			</form>
 		</div>
@@ -325,7 +374,6 @@
 						showBatchModal = false;
 						selectedIds = [];
 						await invalidateAll();
-						items = d.items;
 					}} disabled={batchLoading} class="px-4 py-2 bg-[#F39C12] hover:bg-[#E08E0B] text-white text-sm font-medium rounded-sm disabled:opacity-70">
 						{batchLoading ? 'Memproses...' : 'Update Stok'}
 					</button>

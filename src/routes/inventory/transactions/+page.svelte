@@ -41,7 +41,6 @@
 		
 		showModal = false;
 		await invalidateAll();
-		transactions = data.transactions;
 	}
 
 	let filtered = $derived(

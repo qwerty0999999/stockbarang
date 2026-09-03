@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { invalidateAll } from '$app/navigation';
+
   let { data } = $props();
   let users = $derived(data.users);
   let items = $derived(data.items);
@@ -19,12 +21,7 @@
     
     if (res.ok) {
       message = 'Role berhasil diubah';
-      users = users.map((u) => {
-        if (u.id === userId) {
-          return { ...u, role: newRole };
-        }
-        return u;
-      });
+      await invalidateAll();
       setTimeout(() => message = '', 3000);
     } else {
       const err = await res.json();

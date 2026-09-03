@@ -2,6 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
+	import { onMount } from 'svelte';
+
 	let { data, children } = $props();
 
 	async function logout() {
@@ -11,7 +13,26 @@
 	}
 
 	let activeRoute = $derived($page.url.pathname);
+
+	onMount(async () => {
+		try {
+			const res = await fetch('/api/inventory/alerts');
+			if (res.ok) {
+				const { lowStockItems } = await res.json();
+				if (lowStockItems && lowStockItems.length > 0) {
+					toast.warning(`Peringatan: Ada ${lowStockItems.length} barang dengan stok rendah!`, {
+						description: lowStockItems.map((i: any) => `${i.name} (Sisa: ${i.quantity})`).join(', '),
+						duration: 6000
+					});
+				}
+			}
+		} catch (e) {
+			console.error('Failed to check low stock items', e);
+		}
+	});
 </script>
+
+<Toaster position="top-right" richColors />
 
 <div class="min-h-screen flex bg-[#ECF0F5] font-sans text-gray-800">
 	<!-- Sidebar -->
@@ -159,7 +180,18 @@
 		
 		<!-- Page Content -->
 		<main class="flex-1 overflow-auto p-4">
-			{@render children()}
+			{#if $page.url.pathname === '/inventory' && data.loading}
+				<div class="grid grid-cols-4 gap-4">
+					{#each Array(8) as _ (i)}
+						<div class="bg-white rounded-lg shadow p-4 animate-pulse">
+							<div class="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+							<div class="h-12 bg-gray-200 rounded w-1/2"></div>
+						</div>
+					{/each}
+				</div>
+			{:else}
+				{@render children()}
+			{/if}
 		</main>
 		
 		<!-- Footer -->
