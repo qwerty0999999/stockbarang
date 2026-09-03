@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  import BarcodeScanner from '$lib/components/BarcodeScanner.svelte';
-  import type { PageData } from './$types';
+import { page } from '$app/stores';
+import BarcodeScanner from '$lib/components/BarcodeScanner.svelte';
+import type { PageData } from './$types';
+import { toast } from 'svelte-sonner';
 
   let { data }: { data: PageData } = $props();
   let scannedItemId: string = '';
@@ -30,15 +31,41 @@
     // Logika untuk transaksi masuk/keluar
     console.log('Transaction type:', type, 'for item:', selectedItem);
   }
+
+  async function handleImport(e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', 'items');
+    try {
+      const res = await fetch('/api/import-export', { method: 'POST', body: formData });
+      const result = await res.json();
+      if (res.ok) {
+        toast.success(`Berhasil import ${result.count} item`);
+        // Reload data
+        window.location.reload();
+      } else {
+        toast.error(result.error || 'Import gagal');
+      }
+    } catch (err) {
+      toast.error('Terjadi kesalahan');
+    }
+    input.value = '';
+  }
 </script>
 
 <div class="page-wrap">
   <div class="page-header">
     <h1>Daftar Barang</h1>
     <div class="page-actions">
+      <button on:click={() => document.getElementById('csvInput')?.click()} class="btn btn-primary">Import CSV</button>
+      <a href="/api/import-export?type=items" class="btn btn-success">Export CSV</a>
       <button on:click={() => selectedItem = null} class="btn btn-secondary">Reset</button>
     </div>
   </div>
+  <input type="file" id="csvInput" accept=".csv" style="display:none" on:change={handleImport} />
 
   <div class="main-content">
     <div class="scanner-section">
@@ -161,5 +188,35 @@
   .btn-secondary {
     background: #6c757d;
     color: white;
+  }
+  .btn-primary {
+    background: #007bff;
+    color: white;
+  }
+  .btn-success {
+    background: #28a745;
+    color: white;
+  }
+  .btn-danger {
+    background: #dc3545;
+    color: white;
+  }
+  .btn-warning {
+    background: #ffc107;
+    color: black;
+  }
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .page-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 </style>

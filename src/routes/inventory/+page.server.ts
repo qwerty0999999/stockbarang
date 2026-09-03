@@ -16,7 +16,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		totalOutItems,
 		countInTx,
 		countOutTx,
-		user
+		user,
+		totalInventoryValue,
+		recentTransactions
 	] = await prisma.$transaction([
 		prisma.item.count(),
 		prisma.user.count(),
@@ -31,6 +33,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 		prisma.user.findUnique({
 			where: { id: locals.user.userId },
 			select: { username: true, role: true }
+		}),
+		prisma.item.aggregate({
+			_sum: {
+				price: true
+			}
+		}),
+		prisma.transaction.findMany({
+			take: 7,
+			orderBy: { createdAt: 'desc' },
+			include: { item: true }
 		})
 	]);
 
@@ -45,8 +57,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 			totalInItems: totalInItems._sum.quantity ?? 0,
 			totalOutItems: totalOutItems._sum.quantity ?? 0,
 			countInTx,
-			countOutTx
+			countOutTx,
+			totalInventoryValue: totalInventoryValue._sum.price ?? 0
 		},
+		recentTransactions,
 		user
 	};
 };

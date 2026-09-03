@@ -1,109 +1,59 @@
-import { json } from '@sveltejs/kit';
+import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
-import XLSX from 'xlsx';
+import * as xlsx from 'xlsx';
 
-export async function POST({ request, locals }) {
-  if (!locals.user) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export const POST: RequestHandler = async ({ request, locals }) => {
+	if (!locals.user) {
+		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+	}
 
-  try {
-    const formData = await request.formData();
-    const file = formData.get('file');
+	try {
+		const formData = await request.formData();
+		const file = formData.get('file') as File;
+		if (!file) {
+			return new Response(JSON.stringify({ error: 'File tidak ditemukan' }), { status: 400 });
+		}
 
-    if (!file || !(file instanceof File)) {
-      return json({ error: 'File tidak ditemukan' }, { status: 400 });
-    }
+		const arrayBuffer = await file.arrayBuffer();
+		const buffer = Buffer.from(arrayBuffer);
+		const workbook = xlsx.read(buffer, { type: 'buffer' });
+		
+		const sheetName = workbook.SheetNames[0];
+		const sheet = workbook.Sheets[sheetName];
+		const data = xlsx.utils.sheet_to_json(sheet);
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+		let successCount = 0;
+		let errors = [];
 
-    if (!rows || rows.length === 0) {
-      return json({ error: 'File kosong atau format tidak valid' }, { status: 400 });
-    }
+		for (const row of data as any[]) {
+			try {
+				if (!row.Name || !row.Price) {
+					errors.push(`Baris ke-${successCount + errors.length + 2}: Nama dan Harga wajib diisi.`);
+					continue;
+				}
 
-    const errors = [];
-    const categoryNames = [...new Set(
-      rows.map(row => String(row['Kategori'] || row['category'] || '').trim())
-          .filter(Boolean)
-    )];
+				await prisma.item.create({
+					data: {
+						name: String(row.Name),
+						sku: row.SKU ? String(row.SKU) : null,
+						price: Number(row.Price),
+						quantity: Number(row.Quantity) || 0,
+						minStock: Number(row.MinStock) || 5,
+						description: row.Description ? String(row.Description) : null,
+						userId: locals.user.userId
+					}
+				});
+				successCount++;
+			} catch (e: any) {
+				errors.push(`Gagal memproses '${row.Name || 'Item'}': ${e.message}`);
+			}
+		}
 
-    const categories = await Promise.all(
-      categoryNames.map(name =>
-        prisma.category.upsert({
-          where: { name },
-          update: {},
-          create: { name }
-        })
-      )
-    );
-
-    const categoryMap = Object.fromEntries(categories.map(c => [c.name, c.id]));
-
-    const validItemsData = [];
-    for (const [index, row] of rows.entries()) {
-      const name = String(row['Nama'] || row['name'] || '').trim();
-      const price = parseFloat(String(row['Harga'] ?? row['price'] ?? 0));
-      const quantity = parseInt(String(row['Stok'] ?? row['quantity'] ?? 0));
-      const sku = String(row['SKU'] || row['sku'] || '').trim() || undefined;
-      const minStock = parseInt(String(row['Min Stok'] ?? row['minStock'] ?? 5));
-      const location = String(row['Lokasi'] || row['location'] || '').trim() || null;
-      const categoryName = String(row['Kategori'] || row['category'] || '').trim() || null;
-
-      if (!name || price <= 0) {
-        errors.push(`Baris ${index + 2}: Nama dan Harga wajib diisi`);
-        continue;
-      }
-
-      validItemsData.push({
-        name,
-        sku,
-        price,
-        quantity,
-        minStock,
-        location,
-        categoryId: categoryName ? categoryMap[categoryName] : null,
-      });
-    }
-
-    let createdCount = 0;
-    
-    // Process insertions safely
-    for (const data of validItemsData) {
-       try {
-          const created = await prisma.item.create({ data });
-          createdCount++;
-          if (data.quantity > 0) {
-             await prisma.transaction.create({
-                data: {
-                   itemId: created.id,
-                   type: 'MASUK',
-                   quantity: data.quantity,
-                   reference: 'Import Excel',
-                   notes: `Imported items`,
-                   userId: locals.user.userId
-                }
-             });
-          }
-       } catch(e: any) {
-          if (e.code === 'P2002') {
-            errors.push(`SKU "${data.sku}" sudah digunakan`);
-          } else {
-            errors.push(`Gagal import "${data.name}": ${e.message}`);
-          }
-       }
-    }
-
-    return json({
-      success: true,
-      count: createdCount,
-      errors: errors.length > 0 ? errors : undefined
-    });
-  } catch (error: any) {
-    return json({
-      error: error.message || 'Terjadi kesalahan saat import data'
-    }, { status: 500 });
-  }
-}
+		return new Response(JSON.stringify({ 
+			message: `Berhasil mengimport ${successCount} barang.`,
+			errors: errors.length > 0 ? errors : null
+		}), { status: 200 });
+	} catch (err: any) {
+		return new Response(JSON.stringify({ error: 'Gagal memproses file import' }), { status: 500 });
+	}
+};
