@@ -2,6 +2,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
 import { sendWhatsAppAlert } from '$lib/server/whatsapp';
 import { sendEmail } from '$lib/server/email';
+import { logAction } from '$lib/server/logger';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) {
@@ -64,6 +65,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 			return newTx;
 		});
+
+		// Log aktivitas
+		await logAction(locals.user!.userId, `TRANSACTION_${type}`, `Item ${itemId}, qty ${qty}`);
 
 		// Cek stok minimal setelah transaksi
 		const updatedItem = await prisma.item.findUnique({

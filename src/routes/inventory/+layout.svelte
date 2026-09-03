@@ -127,6 +127,12 @@
 				<img src="/img/nav-pengguna.svg" alt="" class="w-4 h-4 nav-icon" />
 				DATA PENGGUNA
 			</a>
+			<a href="/inventory/logs" 
+				class="flex items-center gap-3 px-4 py-3 hover:bg-[#1E282C] hover:text-white border-l-4 transition-all duration-150
+				{activeRoute.startsWith('/inventory/logs') ? 'border-[#3C8DBC] bg-[#1E282C] text-white' : 'border-transparent text-[#b8c7ce]'}">
+				<img src="/img/nav-laporan.svg" alt="" class="w-4 h-4 nav-icon" />
+				AUDIT LOG
+			</a>
 			{/if}
 			
 			<!-- Ganti Password & Logout -->
