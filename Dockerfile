@@ -1,4 +1,4 @@
-FROM node:20-slim AS builder
+﻿FROM node:20-slim AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -16,4 +16,3 @@ COPY --from=builder /app/package*.json ./
 
 EXPOSE 3000
 CMD ["node", "build/index.js"]
-</content>
