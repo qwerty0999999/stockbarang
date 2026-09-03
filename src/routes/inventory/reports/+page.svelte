@@ -197,12 +197,12 @@
 
 <svelte:head><title>Laporan – InventarisApp</title></svelte:head>
 
-<div class="space-y-4 font-sans text-gray-800">
-  <div class="flex items-center justify-between pb-2 border-b border-gray-200">
-    <h1 class="text-2xl font-normal flex items-center gap-2">
-      LAPORAN <span class="text-sm text-gray-500 font-light">Data Laporan</span>
+<div class="report-wrap">
+  <div class="report-header">
+    <h1 class="report-title">
+      LAPORAN <span class="report-subtitle">Data Laporan</span>
     </h1>
-    <div class="text-xs text-gray-500 flex items-center gap-1">
+    <div class="breadcrumb-wrap">
       <a href="/inventory" class="hover:underline flex items-center gap-1">
         <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
         Home
@@ -212,11 +212,11 @@
     </div>
   </div>
 
-  <div class="flex gap-4 border-b border-[#3C8DBC]">
-    <button onclick={() => activeTab = 'transactions'} class="px-4 py-2 text-sm font-bold {activeTab === 'transactions' ? 'bg-[#3C8DBC] text-white' : 'bg-gray-200 hover:bg-gray-300'} transition-colors rounded-t-sm">
+  <div class="tab-wrap">
+    <button onclick={() => activeTab = 'transactions'} class="tab-btn" class:active={activeTab === 'transactions'}>
       Laporan Transaksi
     </button>
-    <button onclick={() => activeTab = 'items'} class="px-4 py-2 text-sm font-bold {activeTab === 'items' ? 'bg-[#3C8DBC] text-white' : 'bg-gray-200 hover:bg-gray-300'} transition-colors rounded-t-sm">
+    <button onclick={() => activeTab = 'items'} class="tab-btn" class:active={activeTab === 'items'}>
       Laporan Stok Barang
     </button>
   </div>
@@ -340,3 +340,88 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .report-wrap {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #333;
+  }
+  .report-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 16px;
+  }
+  .report-title {
+    font-size: 1.5rem;
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+  .report-subtitle {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 300;
+  }
+  .breadcrumb-wrap {
+    font-size: 0.75rem;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .breadcrumb-wrap a {
+    color: #3c8dbc;
+    text-decoration: none;
+  }
+  .tab-wrap {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid #3C8DBC;
+    margin-bottom: 16px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    background: #e5e7eb;
+    border: none;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover {
+    background: #d1d5db;
+  }
+  .tab-btn.active {
+    background: #3C8DBC;
+    color: white;
+  }
+
+  @media (max-width: 768px) {
+    .report-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .report-title {
+      font-size: 1.2rem;
+    }
+    .breadcrumb-wrap {
+      display: none;
+    }
+    .tab-wrap {
+      gap: 2px;
+    }
+    .tab-btn {
+      padding: 8px 12px;
+      font-size: 0.75rem;
+    }
+  }
+</style>

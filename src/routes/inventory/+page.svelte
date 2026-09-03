@@ -210,13 +210,6 @@
 		align-items: center;
 		gap: 10px;
 	}
-	.page-logo {
-		width: 28px;
-		height: 28px;
-		/* Logo SVG hitam diubah jadi warna biru sidebar */
-		filter: brightness(0) saturate(100%) invert(44%) sepia(68%) saturate(400%) hue-rotate(170deg) brightness(95%);
-		flex-shrink: 0;
-	}
 	.page-subtitle {
 		font-size: 1.25rem;
 		font-weight: 400;
@@ -401,5 +394,74 @@
 	.role-admin { background: #605ca8; }
 	.role-staff  { background: #00a65a; }
 
+	/* ── Mobile Responsive ────────────────────────────── */
+	@media (max-width: 768px) {
+		.page-header {
+			padding: 10px 12px;
+		}
+		.page-header-inner {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 4px;
+		}
+		.page-title {
+			font-size: 1.2rem;
+		}
+		.page-subtitle {
+			font-size: 1rem;
+		}
+		.breadcrumb {
+			display: none;
+		}
+		.main-content {
+			padding: 12px;
+		}
+		.widgets-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 10px;
+		}
+		.widget-value {
+			font-size: 1.8rem;
+		}
+		.widget-label {
+			font-size: 0.75rem;
+		}
+		.widget-icon-bg svg {
+			width: 60px;
+			height: 60px;
+		}
+		.widget-card {
+			min-height: 90px;
+		}
+		.bottom-row {
+			flex-direction: column;
+		}
+		.login-card {
+			max-width: 100%;
+		}
+		.info-label {
+			width: 110px;
+			font-size: 0.8rem;
+		}
+		.info-value {
+			font-size: 0.8rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.widgets-grid {
+			grid-template-columns: 1fr;
+			gap: 8px;
+		}
+		.widget-value {
+			font-size: 1.5rem;
+		}
+		.widget-body {
+			padding: 10px 12px 8px;
+		}
+		.widget-footer {
+			padding: 5px 12px;
+		}
+	}
 
 </style>
