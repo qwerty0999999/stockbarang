@@ -1,19 +1,21 @@
 import { SignJWT, jwtVerify } from 'jose';
+import { env } from '$env/dynamic/private';
 
-import { JWT_SECRET as JWT_SECRET_STR } from '$env/static/private';
-if (!JWT_SECRET_STR) throw new Error('JWT_SECRET must be set');
-const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STR);
+function getJwtSecret() {
+    const secret = env.JWT_SECRET || process.env.JWT_SECRET || 'default-secret-stockbarang-svivoa-2026';
+    return new TextEncoder().encode(secret);
+}
 
 export async function generateToken(payload: { userId: number; username: string; role: string }) {
     return new SignJWT(payload)
         .setProtectedHeader({ alg: 'HS256' })
         .setExpirationTime('1d')
-        .sign(JWT_SECRET);
+        .sign(getJwtSecret());
 }
 
 export async function verifyToken(token: string) {
     try {
-        const { payload } = await jwtVerify(token, JWT_SECRET);
+        const { payload } = await jwtVerify(token, getJwtSecret());
         return payload as { userId: number; username: string; role: string };
     } catch {
         return null;
