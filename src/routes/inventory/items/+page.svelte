@@ -171,7 +171,7 @@
 <div class="overflow-x-auto">
 					{#if loading && items.length === 0}
 						<div class="space-y-4">
-							{#each Array(5) as _ (i)}
+							{#each Array(5) as _, i (i)}
 								<div class="h-12 bg-gray-100 rounded animate-pulse"></div>
 							{/each}
 						</div>
@@ -252,6 +252,7 @@
 						{/each}
 					</tbody>
 				</table>
+				{/if}
 			</div>
 			
 			<div class="mt-4 flex justify-between items-center text-sm text-gray-600">

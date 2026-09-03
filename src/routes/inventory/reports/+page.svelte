@@ -223,17 +223,7 @@
 
   {#if activeTab === 'transactions'}
     <div class="bg-white shadow rounded-none border-t-4 border-[#3C8DBC]">
-	{#if loading}
-		<div class="p-4 space-y-4">
-			<div class="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
-			<div class="grid grid-cols-2 gap-4">
-				<div class="h-32 bg-gray-100 rounded animate-pulse"></div>
-				<div class="h-32 bg-gray-100 rounded animate-pulse"></div>
-			</div>
-			<div class="h-64 bg-gray-100 rounded animate-pulse"></div>
-		</div>
-	{:else}
-      <div class="px-4 py-3 border-b border-gray-100"><h3 class="font-normal text-base">Filter Laporan</h3></div>
+	<div class="px-4 py-3 border-b border-gray-100"><h3 class="font-normal text-base">Filter Laporan</h3></div>
       <div class="p-4 space-y-4">
         <div>
           <label class="block text-sm font-bold mb-1" for="filterMulai">Mulai Tanggal</label>

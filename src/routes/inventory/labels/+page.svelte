@@ -51,17 +51,6 @@
   {/if}
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-	{#if loading}
-		<div class="bg-white rounded-lg shadow p-6 space-y-4 animate-pulse">
-			<div class="h-8 bg-gray-200 rounded w-1/3"></div>
-			<div class="h-6 bg-gray-200 rounded w-1/2"></div>
-			<div class="h-6 bg-gray-200 rounded w-1/2"></div>
-			<div class="h-6 bg-gray-200 rounded w-1/2"></div>
-		</div>
-		<div class="bg-gray-50 rounded-lg shadow p-6 border flex flex-col items-center justify-center min-h-[300px] animate-pulse">
-			<div class="h-48 w-48 bg-gray-200 rounded"></div>
-		</div>
-	{:else}
     <div class="bg-white rounded-lg shadow p-6 space-y-4">
       <h2 class="text-lg font-semibold border-b pb-2">Pengaturan Label</h2>
       

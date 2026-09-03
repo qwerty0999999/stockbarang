@@ -180,18 +180,7 @@
 		
 		<!-- Page Content -->
 		<main class="flex-1 overflow-auto p-4">
-			{#if $page.url.pathname === '/inventory' && data.loading}
-				<div class="grid grid-cols-4 gap-4">
-					{#each Array(8) as _ (i)}
-						<div class="bg-white rounded-lg shadow p-4 animate-pulse">
-							<div class="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
-							<div class="h-12 bg-gray-200 rounded w-1/2"></div>
-						</div>
-					{/each}
-				</div>
-			{:else}
-				{@render children()}
-			{/if}
+			{@render children()}
 		</main>
 		
 		<!-- Footer -->
