@@ -1,5 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
+import { sendWhatsAppAlert } from '$lib/server/whatsapp';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) {
@@ -62,6 +63,19 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 			return newTx;
 		});
+
+		// Cek stok minimal setelah transaksi
+		const updatedItem = await prisma.item.findUnique({
+			where: { id: itemId },
+			include: { category: true }
+		});
+		if (updatedItem && updatedItem.quantity < updatedItem.minStock) {
+			const adminPhone = process.env.WHATSAPP_ADMIN_PHONE;
+			if (adminPhone) {
+				const message = `⚠️ *Stok Menipis!*\n\nBarang: ${updatedItem.name}\nSKU: ${updatedItem.sku || '-'}\nStok saat ini: ${updatedItem.quantity}\nStok minimal: ${updatedItem.minStock}\nKategori: ${updatedItem.category?.name || '-'}\n\nSegera lakukan restock.`;
+				await sendWhatsAppAlert(adminPhone, message);
+			}
+		}
 
 		return new Response(JSON.stringify(result), { status: 201 });
 	} catch (err: any) {
