@@ -17,19 +17,23 @@ export const load: PageServerLoad = async ({ url }) => {
 		]
 	} : {};
 
-	const [items, total] = await Promise.all([
+	const [items, total, categories, suppliers] = await Promise.all([
 		prisma.item.findMany({
 			where: whereClause,
-			include: { category: true },
+			include: { category: true, supplier: true },
 			orderBy: { createdAt: 'desc' },
 			skip,
 			take: limit
 		}),
-		prisma.item.count({ where: whereClause })
+		prisma.item.count({ where: whereClause }),
+		prisma.category.findMany({ orderBy: { name: 'asc' } }),
+		prisma.supplier.findMany({ orderBy: { name: 'asc' } })
 	]);
 
 	return { 
 		items,
+		categories,
+		suppliers,
 		pagination: {
 			page,
 			limit,

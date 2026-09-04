@@ -5,12 +5,36 @@
 
 	const widgets = $derived([
 		{
-			label: 'Model Barang',
-			value: data.stats.totalItems,
-			icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+			label: 'Buku Induk Aset Tetap',
+			value: data.stats.totalAssets ?? 0,
+			icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+			bg: '#6f42c1',
+			bgDark: '#59359a',
+			link: '/inventory/assets'
+		},
+		{
+			label: 'Aset Tersedia',
+			value: data.stats.availableAssets ?? 0,
+			icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
 			bg: '#00a65a',
 			bgDark: '#008d4c',
+			link: '/inventory/assets?status=TERSEDIA'
+		},
+		{
+			label: 'Barang Konsumsi',
+			value: data.stats.totalItems,
+			icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+			bg: '#00c0ef',
+			bgDark: '#00a4cc',
 			link: '/inventory/items'
+		},
+		{
+			label: 'Peminjaman Terlambat',
+			value: data.stats.overdueLoans ?? 0,
+			icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+			bg: (data.stats.overdueLoans ?? 0) > 0 ? '#dd4b39' : '#95a5a6',
+			bgDark: (data.stats.overdueLoans ?? 0) > 0 ? '#c0392b' : '#7f8c8d',
+			link: '/inventory/peminjaman'
 		},
 		{
 			label: 'Pengguna',
@@ -24,8 +48,8 @@
 			label: 'Suplier',
 			value: data.stats.totalSuppliers,
 			icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
-			bg: '#dd4b39',
-			bgDark: '#c0392b',
+			bg: '#3c8dbc',
+			bgDark: '#367fa9',
 			link: '/inventory/suppliers'
 		},
 		{
@@ -98,13 +122,20 @@
 	<div class="page-header">
 		<div class="page-header-inner">
 			<div class="page-title-wrap">
-				<img src="/img/logo.svg" alt="Logo" class="page-logo" />
+				<img src="/img/logo.svg" alt="Logo" class="page-logo" width="22" height="22" />
 				<h1 class="page-title">Dashboard <span class="page-subtitle">Control panel</span></h1>
 			</div>
 
 			<ol class="breadcrumb">
-				<li><a href="/inventory">Home</a></li>
-				<li class="sep">/</li>
+				<li>
+					<a href="/inventory">
+						<svg class="breadcrumb-icon" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+						</svg>
+						Home
+					</a>
+				</li>
+				<li class="sep">&gt;</li>
 				<li class="current">Dashboard</li>
 			</ol>
 		</div>
@@ -182,62 +213,76 @@
 <style>
 	/* ── Layout ─────────────────────────────────────────── */
 	.dashboard-wrap {
-		background: #ecf0f1;
-		min-height: 100vh;
+		width: 100%;
 	}
 
 	/* ── Page Header ──────────────────────────────────── */
 	.page-header {
-		background: #fff;
-		border-bottom: 1px solid #dde3ec;
-		padding: 12px 20px;
+		padding-bottom: 8px;
+		border-bottom: 1px solid #d2d6de;
+		margin-bottom: 16px;
 	}
 	.page-header-inner {
-		max-width: 1400px;
-		margin: 0 auto;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-	}
-	.page-title {
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: #333;
-		margin: 0;
+		flex-wrap: wrap;
+		gap: 8px;
 	}
 	.page-title-wrap {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 8px;
+	}
+	.page-logo {
+		width: 22px;
+		height: 22px;
+		object-fit: contain;
+		flex-shrink: 0;
+	}
+	.page-title {
+		font-size: 1.4rem;
+		font-weight: 500;
+		color: #222d32;
+		margin: 0;
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
 	}
 	.page-subtitle {
-		font-size: 1.25rem;
-		font-weight: 400;
-		color: #999;
+		font-size: 0.85rem;
+		font-weight: 300;
+		color: #777;
 	}
 	.breadcrumb {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 5px;
 		list-style: none;
 		padding: 0;
 		margin: 0;
-		font-size: 0.85rem;
-		color: #999;
+		font-size: 0.75rem;
+		color: #777;
 	}
 	.breadcrumb a {
 		color: #3c8dbc;
 		text-decoration: none;
+		display: inline-flex;
+		align-items: center;
+		gap: 3px;
 	}
 	.breadcrumb a:hover { text-decoration: underline; }
-	.breadcrumb .sep { color: #bbb; }
-	.breadcrumb .current { color: #444; font-weight: 500; }
+	.breadcrumb-icon {
+		width: 13px;
+		height: 13px;
+	}
+	.breadcrumb .sep { color: #bbb; font-size: 0.7rem; }
+	.breadcrumb .current { color: #555; font-weight: 500; }
 
 	/* ── Main Content ──────────────────────────────────── */
 	.main-content {
-		max-width: 1400px;
-		margin: 0 auto;
-		padding: 20px;
+		width: 100%;
+		padding: 0;
 	}
 
 	/* ── Widgets Grid ─────────────────────────────────── */
@@ -397,7 +442,8 @@
 	/* ── Mobile Responsive ────────────────────────────── */
 	@media (max-width: 768px) {
 		.page-header {
-			padding: 10px 12px;
+			padding-bottom: 6px;
+			margin-bottom: 12px;
 		}
 		.page-header-inner {
 			flex-direction: column;
@@ -408,13 +454,13 @@
 			font-size: 1.2rem;
 		}
 		.page-subtitle {
-			font-size: 1rem;
+			font-size: 0.8rem;
 		}
 		.breadcrumb {
 			display: none;
 		}
 		.main-content {
-			padding: 12px;
+			padding: 0;
 		}
 		.widgets-grid {
 			grid-template-columns: repeat(2, 1fr);

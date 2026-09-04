@@ -7,22 +7,21 @@ export const load: PageServerLoad = async ({ locals }) => {
     throw redirect(303, '/inventory');
   }
 
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      username: true,
-      role: true,
-      createdAt: true
-    }
-  });
-
-  const items = await prisma.item.findMany({
-    select: { id: true }
-  });
+  const [users, itemCount] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        createdAt: true
+      }
+    }),
+    prisma.item.count()
+  ]);
 
   return {
     users,
-    items
+    itemCount
   };
 };

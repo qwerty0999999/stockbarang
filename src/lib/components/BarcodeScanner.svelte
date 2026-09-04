@@ -2,71 +2,73 @@
   import { onMount } from 'svelte';
   import { BrowserMultiFormatReader } from '@zxing/library';
 
-  let scanner: BrowserMultiFormatReader;
+  let { onScan }: { onScan?: (result: string) => void } = $props();
+
+  let scanner: BrowserMultiFormatReader | null = null;
   let videoElement: HTMLVideoElement;
-  let result: string = '';
-  let error: string = '';
+  let result = $state('');
+  let error = $state('');
+  let scanning = $state(false);
 
   onMount(() => {
     scanner = new BrowserMultiFormatReader();
     startScanning();
 
     return () => {
-      scanner.reset();
+      if (scanner) {
+        scanner.reset();
+      }
     };
   });
 
   function startScanning() {
+    if (!scanner || !videoElement) return;
+    error = '';
+    scanning = true;
+
     scanner.decodeFromVideoDevice(null, videoElement, (res, err) => {
       if (res) {
         result = res.getText();
-        scanner.reset();
+        scanning = false;
+        if (onScan) onScan(result);
+        if (scanner) scanner.reset();
       }
-      if (err && !(err instanceof NotFoundException)) {
+      if (err && err.name !== 'NotFoundException') {
         error = err.message;
       }
     });
   }
 
-  function handleManualInput() {
-    // Fungsi untuk input manual jika scan gagal
+  function rescan() {
+    result = '';
+    error = '';
+    startScanning();
   }
 </script>
 
-<video bind:this={videoElement} autoplay playsinline></video>
+<div class="scanner-container">
+  <!-- svelte-ignore a11y_media_has_caption -->
+  <video bind:this={videoElement} class="w-full max-w-sm rounded bg-black aspect-video object-cover"></video>
 
-{#if result}
-  <div class="result">
-    <p>Hasil scan: {result}</p>
-    <button on:click={() => startScanning()}>Scan lagi</button>
-  </div>
-{/if}
+  {#if result}
+    <div class="mt-2 p-2 bg-green-50 text-green-800 rounded border border-green-200 text-sm flex items-center justify-between">
+      <span><strong>Hasil Scan:</strong> {result}</span>
+      <button type="button" onclick={rescan} class="text-xs bg-green-600 text-white px-2 py-1 rounded">Scan Ulang</button>
+    </div>
+  {/if}
 
-{#if error}
-  <div class="error">
-    <p>Error: {error}</p>
-    <button on:click={() => startScanning()}>Coba lagi</button>
-  </div>
-{/if}
+  {#if error}
+    <div class="mt-2 p-2 bg-red-50 text-red-800 rounded border border-red-200 text-sm flex items-center justify-between">
+      <span>{error}</span>
+      <button type="button" onclick={rescan} class="text-xs bg-red-600 text-white px-2 py-1 rounded">Coba Lagi</button>
+    </div>
+  {/if}
+</div>
 
 <style>
-  video {
-    width: 100%;
-    max-width: 500px;
-    border-radius: 8px;
-  }
-
-  .result, .error {
-    margin-top: 1rem;
-    padding: 1rem;
-    border-radius: 8px;
-  }
-
-  .result {
-    background-color: #e6f7e6;
-  }
-
-  .error {
-    background-color: #fde8e8;
+  .scanner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 </style>

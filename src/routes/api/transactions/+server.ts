@@ -1,100 +1,89 @@
-import type { RequestHandler } from '@sveltejs/kit';
-import { prisma } from '$lib/server/db';
-import { sendWhatsAppAlert } from '$lib/server/whatsapp';
-import { sendEmail } from '$lib/server/email';
-import { logAction } from '$lib/server/logger';
+import { json } from '@sveltejs/kit';
+import { prisma as db } from '$lib/server/db';
+import type { RequestEvent } from '@sveltejs/kit';
 
-export const GET: RequestHandler = async ({ locals }) => {
-	if (!locals.user) {
-		return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-	}
-	const transactions = await prisma.transaction.findMany({
-		include: { item: true },
-		orderBy: { createdAt: 'desc' }
-	});
-	return new Response(JSON.stringify(transactions), { status: 200 });
-};
+export async function GET({ locals, url }: RequestEvent) {
+  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+  const page = Number(url.searchParams.get('page')) || 1;
+  const limit = Number(url.searchParams.get('limit')) || 20;
+  const skip = (page - 1) * limit;
+  const itemId = url.searchParams.get('itemId');
+  const type = url.searchParams.get('type');
 
-export const POST: RequestHandler = async ({ request, locals }) => {
-	try {
-		if (!locals.user) {
-			return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-		}
+  const where: any = {};
+  if (itemId) where.itemId = parseInt(itemId);
+  if (type) where.type = type;
 
-		const { itemId, type, quantity, reference, notes, supplierId } = await request.json();
-		
-		if (!itemId || !type || !quantity) {
-			return new Response(JSON.stringify({ error: 'Data tidak lengkap' }), { status: 400 });
-		}
+  const transactions = await db.transaction.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    skip,
+    take: limit,
+    include: {
+      item: true,
+      user: { select: { username: true } },
+      supplier: true
+    }
+  });
+  const total = await db.transaction.count({ where });
+  return json({
+    transactions,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+  });
+}
 
-		const qty = Number(quantity);
+export async function POST({ request, locals }: RequestEvent) {
+  if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+  const currentUserId = locals.user.userId;
+  const data = await request.json();
 
-		const result = await prisma.$transaction(async (tx) => {
-			const newTx = await tx.transaction.create({
-				data: {
-					itemId,
-					type,
-					quantity: qty,
-					reference: reference || null,
-					notes: notes || null,
-					userId: locals.user!.userId,
-					supplierId: supplierId ? Number(supplierId) : null
-				}
-			});
+  if (!data.itemId || !data.type || data.quantity == null) {
+    return json({ error: 'Item ID, type, dan quantity wajib diisi' }, { status: 400 });
+  }
+  if (!['MASUK', 'KELUAR', 'ADJUSTMENT'].includes(data.type)) {
+    return json({ error: 'Type harus MASUK, KELUAR, atau ADJUSTMENT' }, { status: 400 });
+  }
 
-			if (type === 'MASUK') {
-				await tx.item.update({
-					where: { id: itemId },
-					data: { quantity: { increment: qty } }
-				});
-			} else if (type === 'KELUAR') {
-				const current = await tx.item.findUnique({ where: { id: itemId } });
-				if (!current || current.quantity < qty) {
-					throw new Error('Stok tidak mencukupi untuk transaksi keluar.');
-				}
-				await tx.item.update({
-					where: { id: itemId },
-					data: { quantity: { decrement: qty } }
-				});
-			} else if (type === 'ADJUSTMENT') {
-				await tx.item.update({
-					where: { id: itemId },
-					data: { quantity: qty }
-				});
-			}
+  const quantity = Number(data.quantity);
+  if (isNaN(quantity) || quantity <= 0) {
+    return json({ error: 'Quantity harus angka positif' }, { status: 400 });
+  }
 
-			return newTx;
-		});
+  try {
+    const result = await db.$transaction(async (tx: any) => {
+      const item = await tx.item.findUnique({ where: { id: parseInt(data.itemId) } });
+      if (!item) throw new Error('Barang tidak ditemukan');
 
-		// Log aktivitas
-		await logAction(locals.user!.userId, `TRANSACTION_${type}`, `Item ${itemId}, qty ${qty}`);
+      let newQuantity = item.quantity;
+      if (data.type === 'MASUK') {
+        newQuantity += quantity;
+      } else if (data.type === 'KELUAR') {
+        if (item.quantity < quantity) throw new Error(`Stok tidak mencukupi. Tersisa ${item.quantity}`);
+        newQuantity -= quantity;
+      } else if (data.type === 'ADJUSTMENT') {
+        newQuantity = quantity;
+      }
 
-		// Cek stok minimal setelah transaksi
-		const updatedItem = await prisma.item.findUnique({
-			where: { id: itemId },
-			include: { category: true }
-		});
-		if (updatedItem && updatedItem.quantity < updatedItem.minStock) {
-			const adminPhone = process.env.WHATSAPP_ADMIN_PHONE;
-			const adminEmail = process.env.SMTP_ADMIN_EMAIL;
-			const subject = `⚠️ Stok Menipis: ${updatedItem.name}`;
-			const html = `<p>Barang: <strong>${updatedItem.name}</strong></p>
-				<p>SKU: ${updatedItem.sku || '-'}</p>
-				<p>Stok saat ini: ${updatedItem.quantity}</p>
-				<p>Stok minimal: ${updatedItem.minStock}</p>
-				<p>Kategori: ${updatedItem.category?.name || '-'}</p>
-				<p>Segera lakukan restock.</p>`;
-			if (adminPhone) {
-				const message = `⚠️ *Stok Menipis!*\n\nBarang: ${updatedItem.name}\nSKU: ${updatedItem.sku || '-'}\nStok saat ini: ${updatedItem.quantity}\nStok minimal: ${updatedItem.minStock}\nKategori: ${updatedItem.category?.name || '-'}\n\nSegera lakukan restock.`;
-				await sendWhatsAppAlert(adminPhone, message);
-			}
-			if (adminEmail) {
-				await sendEmail(adminEmail, subject, html);
-			}
-		}
+      await tx.item.update({
+        where: { id: parseInt(data.itemId) },
+        data: { quantity: newQuantity }
+      });
 
-		return new Response(JSON.stringify(result), { status: 201 });
-	} catch (err: any) {
-		return new Response(JSON.stringify({ error: err.message }), { status: 500 });
-	}
-};
+      return await tx.transaction.create({
+        data: {
+          type: data.type,
+          quantity,
+          note: data.note || data.notes || '',
+          reference: data.reference || null,
+          itemId: parseInt(data.itemId),
+          userId: currentUserId,
+          supplierId: data.supplierId ? parseInt(data.supplierId) : null
+        },
+        include: { item: true, user: { select: { username: true } }, supplier: true }
+      });
+    });
+    return json(result);
+  } catch (err: any) {
+    return json({ error: err.message }, { status: 400 });
+  }
+}

@@ -3,7 +3,7 @@
 
   let { data } = $props();
   let users = $derived(data.users);
-  let items = $derived(data.items);
+  let itemCount = $derived(data.itemCount);
   let loading = $state(false);
   let message = $state('');
 
@@ -68,7 +68,7 @@
     </div>
     <div class="bg-white rounded shadow-sm border border-gray-200 p-5">
       <p class="text-gray-500 text-xs font-medium uppercase tracking-wide">Total Barang</p>
-      <p class="text-2xl font-bold text-gray-800">{items.length}</p>
+      <p class="text-2xl font-bold text-gray-800">{itemCount}</p>
     </div>
     <div class="bg-white rounded shadow-sm border border-gray-200 p-5">
       <p class="text-gray-500 text-xs font-medium uppercase tracking-wide">Admin</p>

@@ -1,1 +1,33 @@
-- [ ] Modify inventory-app/public/js/scripts.js to send login request via fetch and redirect to index.html on success
+# Implementasi Sesuai PRD 2.0 (Sistem Inventori & Buku Induk Aset)
+
+- [x] Sinkronisasi Skema Database Prisma (Log & AssetMovement) ke Supabase PostgreSQL
+- [x] Perbaikan semua error kompilasi TypeScript & Svelte (`svelte-check` 0 error, 0 warning)
+- [x] Modul Buku Induk Inventaris / Household Register (`/inventory/assets`)
+  - [x] Pelacakan per unit unik (Kode Aset & Serial Number)
+  - [x] Pelacakan kondisi fisik (Baik, Rusak Ringan, Rusak Berat, Hilang)
+  - [x] Pelacakan status (Tersedia, Dipinjam, Mutasi, Afkir)
+  - [x] Pelacakan PIC, Nilai Perolehan, Lokasi, dan Tanggal Perolehan
+  - [x] Fitur Mutasi / Riwayat Perpindahan Aset (`AssetMovement`)
+  - [x] Export Buku Induk ke Excel & PDF
+- [x] Modul Master Data Terpadu (`/inventory/master`)
+  - [x] Kategori Barang & Aset
+  - [x] Merek / Brand
+  - [x] Lokasi / Ruangan
+  - [x] Data Profil Peminjam / Karyawan (Internal & Eksternal)
+- [x] Modul Peminjaman Barang & Aset (`/inventory/peminjaman`)
+  - [x] Peminjaman untuk Aset Tetap maupun Barang Konsumsi
+  - [x] Integrasi profil peminjam master
+  - [x] Batas waktu peminjaman & auto-deteksi keterlambatan (overdue alerts)
+  - [x] Validasi kondisi fisik saat dipinjam vs dikembalikan
+  - [x] Export Laporan Peminjaman ke Excel & PDF
+- [x] Modul Transaksi In/Out (`/inventory/transactions`)
+  - [x] Dropdown Supplier/Vendor & input No. Dokumen Referensi (PO/Faktur/Surat Jalan)
+- [x] Pusat Pelaporan & Analitik (`/inventory/reports`)
+  - [x] Laporan Buku Induk Aset Tetap (per Lokasi/Kategori/Kondisi)
+  - [x] Laporan Stok Konsumsi (Tracking SKU, Min Stock, Nilai)
+  - [x] Laporan Transaksi In/Out
+  - [x] Laporan Peminjaman & Keterlambatan
+  - [x] Export semua laporan ke Excel dan PDF
+- [x] Generator Cetak Label Barcode & QR Code (`/inventory/labels`)
+  - [x] Dukungan cetak label untuk Aset Tetap dan Barang Konsumsi
+- [x] Verifikasi Build Produksi (`npm run build` sukses 100%)

@@ -4,6 +4,10 @@ import type { RequestEvent } from '@sveltejs/kit';
 
 export async function PATCH({ params, request, locals }: RequestEvent) {
   if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+  const currentUserId = locals.user.userId;
+  const id = parseInt(params.id || '');
+  if (isNaN(id)) return json({ error: 'ID tidak valid' }, { status: 400 });
+
   const data = await request.json();
 
   if (data.status !== 'DIKEMBALIKAN') {
@@ -12,26 +16,50 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
 
   try {
     const result = await db.$transaction(async (tx: any) => {
-      const loan = await tx.loan.findUnique({ where: { id: parseInt(params.id as string) } });
+      const loan = await tx.loan.findUnique({ where: { id } });
       if (!loan) throw new Error('Data peminjaman tidak ditemukan');
       if (loan.status === 'DIKEMBALIKAN') throw new Error('Barang sudah dikembalikan sebelumnya');
 
+      const conditionAfter = data.conditionAfter || loan.conditionBefore || 'BAIK';
+
       // Update peminjaman menjadi DIKEMBALIKAN
       const updatedLoan = await tx.loan.update({
-        where: { id: parseInt(params.id as string) },
+        where: { id },
         data: {
           status: 'DIKEMBALIKAN',
           actualReturnDate: new Date(),
+          conditionAfter,
           notes: data.notes || loan.notes
         },
-        include: { item: true, user: { select: { username: true } } }
+        include: { item: true, asset: true, borrower: true, user: { select: { username: true } } }
       });
 
-      // Kembalikan stok ke item
-      await tx.item.update({
-        where: { id: loan.itemId },
-        data: { quantity: { increment: loan.quantity } }
-      });
+      // Kembalikan stok atau ubah status aset
+      if (loan.itemId) {
+        await tx.item.update({
+          where: { id: loan.itemId },
+          data: { quantity: { increment: loan.quantity } }
+        });
+
+        await tx.transaction.create({
+          data: {
+            type: 'MASUK',
+            quantity: loan.quantity,
+            note: `Pengembalian peminjaman ${loan.loanCode}`,
+            reference: loan.loanCode,
+            itemId: loan.itemId,
+            userId: currentUserId
+          }
+        });
+      } else if (loan.assetId) {
+        await tx.asset.update({
+          where: { id: loan.assetId },
+          data: {
+            status: 'TERSEDIA',
+            condition: conditionAfter
+          }
+        });
+      }
 
       return updatedLoan;
     });
@@ -42,23 +70,33 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
   }
 }
 
-export async function DELETE({ params, request, locals }: RequestEvent) {
+export async function DELETE({ params, locals }: RequestEvent) {
   if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+  const id = parseInt(params.id || '');
+  if (isNaN(id)) return json({ error: 'ID tidak valid' }, { status: 400 });
+
   try {
-    const loan = await db.loan.findUnique({ where: { id: parseInt(params.id as string) } });
+    const loan = await db.loan.findUnique({ where: { id } });
     if (!loan) return json({ error: 'Tidak ditemukan' }, { status: 404 });
-    
+
     await db.$transaction(async (tx: any) => {
-      // Jika status masih DIPINJAM, kembalikan stok dulu
+      // Jika status masih DIPINJAM, kembalikan stok atau kembalikan status aset
       if (loan.status === 'DIPINJAM') {
-        await tx.item.update({
-          where: { id: loan.itemId },
-          data: { quantity: { increment: loan.quantity } }
-        });
+        if (loan.itemId) {
+          await tx.item.update({
+            where: { id: loan.itemId },
+            data: { quantity: { increment: loan.quantity } }
+          });
+        } else if (loan.assetId) {
+          await tx.asset.update({
+            where: { id: loan.assetId },
+            data: { status: 'TERSEDIA' }
+          });
+        }
       }
-      await tx.loan.delete({ where: { id: parseInt(params.id as string) } });
+      await tx.loan.delete({ where: { id } });
     });
-    
+
     return json({ success: true });
   } catch (err: any) {
     return json({ error: err.message }, { status: 500 });

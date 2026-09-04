@@ -110,7 +110,8 @@
 							<th class="p-3 border-r border-gray-200">TANGGAL</th>
 							<th class="p-3 border-r border-gray-200">NAMA BARANG</th>
 							<th class="p-3 border-r border-gray-200 text-center">JUMLAH</th>
-							<th class="p-3 border-r border-gray-200">REFERENSI / PENGIRIM / PENERIMA</th>
+							<th class="p-3 border-r border-gray-200">SUPPLIER / VENDOR</th>
+							<th class="p-3 border-r border-gray-200">NO. DOKUMEN / REF</th>
 							<th class="p-3 border-r border-gray-200">CATATAN</th>
 						</tr>
 					</thead>
@@ -118,13 +119,14 @@
 						{#each filtered as tx, index (tx.id)}
 							<tr class="hover:bg-gray-50 text-gray-700">
 								<td class="p-3 border-r border-gray-200 text-center">{index + 1}</td>
-								<td class="p-3 border-r border-gray-200 font-semibold">{formatDate(tx.createdAt)}</td>
+								<td class="p-3 border-r border-gray-200 font-semibold text-xs">{formatDate(tx.createdAt)}</td>
 								<td class="p-3 border-r border-gray-200 font-bold">{tx.item?.name}</td>
 								<td class="p-3 border-r border-gray-200 text-center font-bold {activeType === 'MASUK' ? 'text-green-600' : 'text-red-600'}">
 									{activeType === 'MASUK' ? '+' : '-'}{tx.quantity}
 								</td>
-								<td class="p-3 border-r border-gray-200">{tx.reference || '-'}</td>
-								<td class="p-3 border-r border-gray-200">{tx.notes || '-'}</td>
+								<td class="p-3 border-r border-gray-200 text-xs">{tx.supplier?.name || '-'}</td>
+								<td class="p-3 border-r border-gray-200 font-mono text-xs">{tx.reference || '-'}</td>
+								<td class="p-3 border-r border-gray-200 text-xs">{tx.notes || '-'}</td>
 							</tr>
 						{:else}
 							<tr>
@@ -175,12 +177,30 @@
 					<label for="qty" class="block text-sm font-bold text-gray-700 mb-1">Jumlah</label>
 					<input id="qty" type="number" bind:value={form.quantity} min="1" required class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm" />
 				</div>
-				<div>
-					<label for="reference" class="block text-sm font-bold text-gray-700 mb-1">
-						{activeType === 'MASUK' ? 'Supplier / Pengirim' : 'Tujuan / Penerima'}
-					</label>
-					<input id="reference" type="text" bind:value={form.reference} placeholder="Opsional" class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm" />
-				</div>
+				{#if activeType === 'MASUK'}
+					<div>
+						<label for="supplierId" class="block text-sm font-bold text-gray-700 mb-1">Supplier / Asal Pengirim</label>
+						<select id="supplierId" bind:value={form.supplierId} class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm bg-white">
+							<option value="">-- Pilih Supplier (Opsional) --</option>
+							{#each suppliers as sup}
+								<option value={sup.id.toString()}>{sup.name}</option>
+							{/each}
+						</select>
+					</div>
+					<div>
+						<label for="reference" class="block text-sm font-bold text-gray-700 mb-1">
+							No. Dokumen Referensi (No. PO / Faktur / Surat Jalan)
+						</label>
+						<input id="reference" type="text" bind:value={form.reference} placeholder="Contoh: PO-2026-0012 / INV-998" class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm" />
+					</div>
+				{:else}
+					<div>
+						<label for="reference" class="block text-sm font-bold text-gray-700 mb-1">
+							Tujuan Pengeluaran / Penerima
+						</label>
+						<input id="reference" type="text" bind:value={form.reference} placeholder="Nama divisi / pemakai..." class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm" />
+					</div>
+				{/if}
 				<div>
 					<label for="notes" class="block text-sm font-bold text-gray-700 mb-1">Catatan Tambahan</label>
 					<textarea id="notes" bind:value={form.notes} rows="2" placeholder="Opsional" class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm resize-none"></textarea>

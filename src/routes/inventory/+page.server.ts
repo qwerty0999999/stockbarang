@@ -5,6 +5,8 @@ import { prisma } from '$lib/server/db';
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) throw redirect(303, '/login');
 
+	const now = new Date();
+
 	const [
 		totalItems,
 		totalUsers,
@@ -12,38 +14,31 @@ export const load: PageServerLoad = async ({ locals }) => {
 		totalLoans,
 		returnedLoans,
 		pendingLoans,
+		overdueLoans,
 		totalInItems,
 		totalOutItems,
 		countInTx,
 		countOutTx,
-		user,
-		totalInventoryValue,
-		recentTransactions
-	] = await prisma.$transaction([
+		totalAssets,
+		availableAssets,
+		loanedAssets,
+		damagedAssets
+	] = await Promise.all([
 		prisma.item.count(),
 		prisma.user.count(),
 		prisma.supplier.count(),
 		prisma.loan.count(),
 		prisma.loan.count({ where: { status: 'DIKEMBALIKAN' } }),
 		prisma.loan.count({ where: { status: 'DIPINJAM' } }),
+		prisma.loan.count({ where: { status: 'DIPINJAM', expectedReturnDate: { lt: now } } }),
 		prisma.transaction.aggregate({ where: { type: 'MASUK' }, _sum: { quantity: true } }),
 		prisma.transaction.aggregate({ where: { type: 'KELUAR' }, _sum: { quantity: true } }),
 		prisma.transaction.count({ where: { type: 'MASUK' } }),
 		prisma.transaction.count({ where: { type: 'KELUAR' } }),
-		prisma.user.findUnique({
-			where: { id: locals.user.userId },
-			select: { username: true, role: true }
-		}),
-		prisma.item.aggregate({
-			_sum: {
-				price: true
-			}
-		}),
-		prisma.transaction.findMany({
-			take: 7,
-			orderBy: { createdAt: 'desc' },
-			include: { item: true }
-		})
+		prisma.asset.count(),
+		prisma.asset.count({ where: { status: 'TERSEDIA' } }),
+		prisma.asset.count({ where: { status: 'DIPINJAM' } }),
+		prisma.asset.count({ where: { condition: { in: ['RUSAK_RINGAN', 'RUSAK_BERAT', 'HILANG'] } } })
 	]);
 
 	return {
@@ -54,13 +49,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 			totalLoans,
 			returnedLoans,
 			pendingLoans,
+			overdueLoans,
 			totalInItems: totalInItems._sum.quantity ?? 0,
 			totalOutItems: totalOutItems._sum.quantity ?? 0,
 			countInTx,
 			countOutTx,
-			totalInventoryValue: totalInventoryValue._sum.price ?? 0
+			totalAssets,
+			availableAssets,
+			loanedAssets,
+			damagedAssets
 		},
-		recentTransactions,
-		user
+		user: {
+			id: locals.user.userId,
+			username: locals.user.username,
+			role: locals.user.role
+		}
 	};
 };

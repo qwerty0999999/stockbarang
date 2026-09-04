@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page, navigating } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
 
@@ -27,16 +27,22 @@
 		try {
 			const res = await fetch('/api/inventory/alerts');
 			if (res.ok) {
-				const { lowStockItems } = await res.json();
+				const { lowStockItems, overdueLoans } = await res.json();
 				if (lowStockItems && lowStockItems.length > 0) {
 					toast.warning(`Peringatan: Ada ${lowStockItems.length} barang dengan stok rendah!`, {
-						description: lowStockItems.map((i: any) => `${i.name} (Sisa: ${i.quantity})`).join(', '),
+						description: lowStockItems.slice(0, 3).map((i: any) => `${i.name} (Sisa: ${i.quantity})`).join(', '),
 						duration: 6000
+					});
+				}
+				if (overdueLoans && overdueLoans.length > 0) {
+					toast.error(`Peringatan: Ada ${overdueLoans.length} peminjaman melewati batas waktu (terlambat)!`, {
+						description: overdueLoans.slice(0, 3).map((l: any) => `${l.loanCode}: ${l.borrower?.name || l.borrowerName}`).join(', '),
+						duration: 7000
 					});
 				}
 			}
 		} catch (e) {
-			console.error('Failed to check low stock items', e);
+			console.error('Failed to check alerts', e);
 		}
 	});
 </script>
@@ -47,6 +53,11 @@
 </svelte:head>
 
 <Toaster position="top-right" richColors />
+
+<!-- Top Navigation Loading Bar -->
+{#if $navigating}
+	<div class="top-nav-loader" aria-hidden="true"></div>
+{/if}
 
 <!-- Mobile Overlay -->
 {#if sidebarOpen}
@@ -79,23 +90,23 @@
 		
 		<div class="sidebar-section-title">MAIN NAVIGATION</div>
 
-		<nav class="sidebar-nav">
+		<nav class="sidebar-nav" data-sveltekit-preload-data="hover">
 			<a href="/inventory" onclick={closeSidebar}
 				class="nav-link" class:active={activeRoute === '/inventory'}>
 				<img src="/img/nav-dashboard.svg" alt="" class="w-4 h-4 nav-icon" />
 				DASHBOARD
 			</a>
 			
+			<a href="/inventory/assets" onclick={closeSidebar}
+				class="nav-link" class:active={activeRoute.startsWith('/inventory/assets')}>
+				<svg class="w-4 h-4 nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+				BUKU INDUK ASET
+			</a>
+
 			<a href="/inventory/items" onclick={closeSidebar}
 				class="nav-link" class:active={activeRoute.startsWith('/inventory/items')}>
 				<img src="/img/nav-items.svg" alt="" class="w-4 h-4 nav-icon" />
-				DATA BARANG
-			</a>
-			
-			<a href="/inventory/suppliers" onclick={closeSidebar}
-				class="nav-link" class:active={activeRoute.startsWith('/inventory/suppliers')}>
-				<img src="/img/nav-suppliers.svg" alt="" class="w-4 h-4 nav-icon" />
-				DATA SUPLIER
+				STOK KONSUMSI
 			</a>
 			
 			<a href="/inventory/peminjaman" onclick={closeSidebar}
@@ -116,6 +127,24 @@
 				BARANG KELUAR
 			</a>
 			{/if}
+
+			<a href="/inventory/master" onclick={closeSidebar}
+				class="nav-link" class:active={activeRoute.startsWith('/inventory/master')}>
+				<svg class="w-4 h-4 nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+				MASTER DATA
+			</a>
+
+			<a href="/inventory/suppliers" onclick={closeSidebar}
+				class="nav-link" class:active={activeRoute.startsWith('/inventory/suppliers')}>
+				<img src="/img/nav-suppliers.svg" alt="" class="w-4 h-4 nav-icon" />
+				DATA SUPLIER
+			</a>
+
+			<a href="/inventory/labels" onclick={closeSidebar}
+				class="nav-link" class:active={activeRoute.startsWith('/inventory/labels')}>
+				<svg class="w-4 h-4 nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+				CETAK LABEL
+			</a>
 			
 			<a href="/inventory/reports" onclick={closeSidebar}
 				class="nav-link" class:active={activeRoute.startsWith('/inventory/reports')}>
@@ -207,6 +236,32 @@
 	:global(button:hover .nav-icon) {
 		filter: brightness(0) invert(1);
 		opacity: 1;
+	}
+
+	.top-nav-loader {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+		background: #00c0ef;
+		z-index: 999999;
+		box-shadow: 0 0 10px #00c0ef, 0 0 5px #3c8dbc;
+		animation: nav-loading 1.2s infinite ease-in-out;
+	}
+	@keyframes nav-loading {
+		0% {
+			transform: scaleX(0.1);
+			transform-origin: left;
+		}
+		50% {
+			transform: scaleX(0.7);
+			transform-origin: left;
+		}
+		100% {
+			transform: scaleX(1);
+			transform-origin: right;
+		}
 	}
 
 	.layout-wrap {

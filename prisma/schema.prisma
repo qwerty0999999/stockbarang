@@ -13,12 +13,35 @@ model User {
   username      String        @unique
   password      String
   avatar        String?
-  role          String        @default("manajemen") // admin | manajemen | dev
+  role          String        @default("manajemen")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   items         Item[]
   transactions  Transaction[]
-  loans         Loan[]        // Relasi petugas yang mencatat pinjaman
+  loans         Loan[]
+  assets        Asset[]
+  logs          Log[]
+  assetMovements AssetMovement[]
+}
+
+model Location {
+  id            Int           @id @default(autoincrement())
+  name          String        @unique
+  description   String?
+  assets        Asset[]
+  createdAt     DateTime      @default(now())
+}
+
+model Borrower {
+  id            Int           @id @default(autoincrement())
+  name          String
+  type          String        @default("internal")
+  department    String?
+  phone         String?
+  email         String?
+  loans         Loan[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Category {
@@ -26,6 +49,15 @@ model Category {
   name          String        @unique
   description   String?
   items         Item[]
+  assets        Asset[]
+  createdAt     DateTime      @default(now())
+}
+
+model Brand {
+  id            Int           @id @default(autoincrement())
+  name          String        @unique
+  description   String?
+  assets        Asset[]
   createdAt     DateTime      @default(now())
 }
 
@@ -35,8 +67,9 @@ model Supplier {
   address       String?
   phone         String?
   email         String?
-  items         Item[]        // Barang yang disuplai oleh supplier ini (opsional)
-  transactions  Transaction[] // Transaksi masuk dari supplier ini
+  items         Item[]
+  assets        Asset[]
+  transactions  Transaction[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
@@ -60,6 +93,70 @@ model Item {
   updatedAt     DateTime      @updatedAt
   userId        Int?
   user          User?         @relation(fields: [userId], references: [id])
+
+  @@index([categoryId])
+  @@index([createdAt])
+}
+
+model Asset {
+  id            Int           @id @default(autoincrement())
+  assetCode     String        @unique
+  serialNumber  String?
+  name          String
+  condition     String        @default("BAIK") // BAIK, RUSAK_RINGAN, RUSAK_BERAT, HILANG
+  status        String        @default("TERSEDIA") // TERSEDIA, DIPINJAM, MUTASI, AFKIR
+  pic           String?
+  purchaseDate  DateTime?
+  price         Float?
+  description   String?
+  
+  categoryId    Int?
+  category      Category?     @relation(fields: [categoryId], references: [id])
+  brandId       Int?
+  brand         Brand?        @relation(fields: [brandId], references: [id])
+  locationId    Int?
+  location      Location?     @relation(fields: [locationId], references: [id])
+  supplierId    Int?
+  supplier      Supplier?     @relation(fields: [supplierId], references: [id])
+  userId        Int?
+  user          User?         @relation(fields: [userId], references: [id])
+  
+  loans         Loan[]
+  movements     AssetMovement[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status])
+  @@index([condition])
+  @@index([categoryId])
+  @@index([locationId])
+  @@index([createdAt])
+}
+
+model AssetMovement {
+  id            Int           @id @default(autoincrement())
+  assetId       Int
+  asset         Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  fromLocation  String?
+  toLocation    String?
+  fromPic       String?
+  toPic         String?
+  reason        String?
+  createdAt     DateTime      @default(now())
+  userId        Int?
+  user          User?         @relation(fields: [userId], references: [id])
+
+  @@index([assetId])
+  @@index([createdAt])
+}
+
+model Log {
+  id            Int           @id @default(autoincrement())
+  userId        Int?
+  user          User?         @relation(fields: [userId], references: [id])
+  action        String
+  details       String?
+  createdAt     DateTime      @default(now())
 }
 
 model Transaction {
@@ -76,25 +173,41 @@ model Transaction {
   supplierId    Int?
   supplier      Supplier?     @relation(fields: [supplierId], references: [id])
   createdAt     DateTime      @default(now())
+
+  @@index([type])
+  @@index([itemId])
+  @@index([createdAt])
 }
 
 model Loan {
   id                  Int       @id @default(autoincrement())
   loanCode            String    @unique
-  borrowerName        String    // Nama peminjam
-  quantity            Int
-  status              String    @default("DIPINJAM") // 'DIPINJAM', 'DIKEMBALIKAN'
+  borrowerName        String?   // Nama peminjam (legacy/quick string)
+  borrowerId          Int?
+  borrower            Borrower? @relation(fields: [borrowerId], references: [id])
+  quantity            Int       @default(1)
+  status              String    @default("DIPINJAM") // 'DIPINJAM', 'DIKEMBALIKAN', 'TERLAMBAT'
   borrowDate          DateTime  @default(now())
   expectedReturnDate  DateTime? // Rencana tanggal kembali
   actualReturnDate    DateTime? // Tanggal realisasi kembali
+  conditionBefore     String?   @default("BAIK")
+  conditionAfter      String?
   notes               String?
   
-  itemId              Int
-  item                Item      @relation(fields: [itemId], references: [id])
+  itemId              Int?
+  item                Item?     @relation(fields: [itemId], references: [id])
+  assetId             Int?
+  asset               Asset?    @relation(fields: [assetId], references: [id])
   
   userId              Int       // Petugas yang mencatat
   user                User      @relation(fields: [userId], references: [id])
   
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+
+  @@index([status])
+  @@index([borrowerId])
+  @@index([itemId])
+  @@index([assetId])
+  @@index([createdAt])
 }
