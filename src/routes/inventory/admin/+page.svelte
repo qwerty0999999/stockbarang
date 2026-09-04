@@ -61,22 +61,26 @@
   {/if}
 
   <!-- Stats -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-    <div class="bg-white rounded shadow-sm border border-gray-200 p-5">
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="bg-white rounded shadow-sm border border-gray-200 p-4">
       <p class="text-gray-500 text-xs font-medium uppercase tracking-wide">Total User</p>
-      <p class="text-2xl font-bold text-gray-800">{users.length}</p>
+      <p class="text-2xl font-bold text-gray-800 mt-1">{users.length}</p>
     </div>
-    <div class="bg-white rounded shadow-sm border border-gray-200 p-5">
-      <p class="text-gray-500 text-xs font-medium uppercase tracking-wide">Total Barang</p>
-      <p class="text-2xl font-bold text-gray-800">{itemCount}</p>
+    <div class="bg-white rounded shadow-sm border border-gray-200 p-4">
+      <p class="text-gray-500 text-xs font-medium uppercase tracking-wide">Super User</p>
+      <p class="text-2xl font-bold text-rose-600 mt-1">{users.filter((u) => u.role === 'dev').length}</p>
     </div>
-    <div class="bg-white rounded shadow-sm border border-gray-200 p-5">
+    <div class="bg-white rounded shadow-sm border border-gray-200 p-4">
       <p class="text-gray-500 text-xs font-medium uppercase tracking-wide">Admin</p>
-      <p class="text-2xl font-bold text-gray-800">{users.filter((u) => u.role === 'admin').length}</p>
+      <p class="text-2xl font-bold text-purple-600 mt-1">{users.filter((u) => u.role === 'admin').length}</p>
     </div>
-    <div class="bg-white rounded shadow-sm border border-gray-200 p-5">
+    <div class="bg-white rounded shadow-sm border border-gray-200 p-4">
       <p class="text-gray-500 text-xs font-medium uppercase tracking-wide">Manajemen</p>
-      <p class="text-2xl font-bold text-gray-800">{users.filter((u) => u.role === 'manajemen').length}</p>
+      <p class="text-2xl font-bold text-blue-600 mt-1">{users.filter((u) => u.role === 'manajemen').length}</p>
+    </div>
+    <div class="bg-white rounded shadow-sm border border-gray-200 p-4 col-span-2 md:col-span-1">
+      <p class="text-gray-500 text-xs font-medium uppercase tracking-wide">Total Barang</p>
+      <p class="text-2xl font-bold text-gray-800 mt-1">{itemCount}</p>
     </div>
   </div>
 
@@ -103,19 +107,32 @@
               <td class="px-6 py-4 font-medium text-gray-800">{user.id}</td>
               <td class="px-6 py-4 font-medium text-gray-800">{user.username}</td>
               <td class="px-6 py-4">
-                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium {user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
-                  {user.role}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {user.role === 'dev' ? 'bg-rose-100 text-rose-700 font-semibold border border-rose-200' : user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
+                  {#if user.role === 'dev'}
+                    <svg class="w-3 h-3 mr-1 text-rose-600 inline" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+                    </svg>
+                    SUPER USER (DEV)
+                  {:else}
+                    {user.role}
+                  {/if}
                 </span>
               </td>
               <td class="px-6 py-4 text-gray-500 text-xs">{formatDate(user.createdAt)}</td>
               <td class="px-6 py-4 text-center">
-                <button 
-                  onclick={() => toggleRole(user.id, user.role)}
-                  disabled={loading}
-                  class="px-3 py-1 text-xs font-medium rounded transition {user.role === 'admin' ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-green-100 text-green-700 hover:bg-green-200'} disabled:opacity-50"
-                >
-                  {user.role === 'admin' ? 'Turunkan' : 'Jadikan Admin'}
-                </button>
+                {#if user.role === 'dev'}
+                  <span class="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded bg-rose-50 text-rose-600 border border-rose-200">
+                    Akses Penuh
+                  </span>
+                {:else}
+                  <button 
+                    onclick={() => toggleRole(user.id, user.role)}
+                    disabled={loading}
+                    class="px-3 py-1 text-xs font-medium rounded transition {user.role === 'admin' ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-green-100 text-green-700 hover:bg-green-200'} disabled:opacity-50"
+                  >
+                    {user.role === 'admin' ? 'Turunkan ke Manajemen' : 'Jadikan Admin'}
+                  </button>
+                {/if}
               </td>
             </tr>
           {/each}

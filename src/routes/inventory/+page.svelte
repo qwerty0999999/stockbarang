@@ -111,7 +111,7 @@
 	]);
 
 	const roleLabel = $derived(
-		data.user?.role === 'admin' ? 'ADMIN' : (data.user?.role === 'dev' ? 'DEV' : (data.user?.role ?? '').toUpperCase())
+		data.user?.role === 'dev' ? 'SUPER USER (DEV)' : (data.user?.role === 'admin' ? 'ADMIN' : (data.user?.role ?? '').toUpperCase())
 	);
 </script>
 
@@ -197,7 +197,7 @@
 					<div class="info-row">
 						<span class="info-label">Level Hak Akses</span>
 						<span
-							class="role-badge {data.user?.role === 'admin' ? 'role-admin' : 'role-staff'}"
+							class="role-badge {data.user?.role === 'dev' ? 'role-dev' : (data.user?.role === 'admin' ? 'role-admin' : 'role-staff')}"
 						>
 							{roleLabel}
 						</span>
@@ -436,6 +436,7 @@
 		letter-spacing: 0.05em;
 		color: #fff;
 	}
+	.role-dev   { background: #e11d48; }
 	.role-admin { background: #605ca8; }
 	.role-staff  { background: #00a65a; }
 

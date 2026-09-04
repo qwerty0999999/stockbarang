@@ -171,8 +171,8 @@
 					<h3 class="mt-3 text-lg font-semibold text-gray-800">{user?.username}</h3>
 					<span class="text-sm text-gray-500">ID User: #{user?.id}</span>
 <span class="inline-block mt-2 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider 
-{user?.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
-	{user?.role}
+{user?.role === 'dev' ? 'bg-rose-100 text-rose-700 border border-rose-200' : user?.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
+	{user?.role === 'dev' ? 'SUPER USER (DEV)' : user?.role}
 </span>
 				</div>
 				<div class="p-4 space-y-2 text-sm">
