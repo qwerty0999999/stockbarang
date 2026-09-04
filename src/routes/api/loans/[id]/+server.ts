@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { prisma as db } from '$lib/server/db';
+import { logAction } from '$lib/server/logger';
 import type { RequestEvent } from '@sveltejs/kit';
 
 export async function PATCH({ params, request, locals }: RequestEvent) {
@@ -52,10 +53,11 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
           }
         });
       } else if (loan.assetId) {
+        const nextStatus = (conditionAfter === 'RUSAK_BERAT' || conditionAfter === 'HILANG') ? 'AFKIR' : 'TERSEDIA';
         await tx.asset.update({
           where: { id: loan.assetId },
           data: {
-            status: 'TERSEDIA',
+            status: nextStatus,
             condition: conditionAfter
           }
         });
@@ -63,6 +65,8 @@ export async function PATCH({ params, request, locals }: RequestEvent) {
 
       return updatedLoan;
     });
+
+    await logAction(currentUserId, 'KEMBALI_BARANG', `Pengembalian ${result.loanCode}: ${result.item?.name || result.asset?.name || ''} (Kondisi: ${result.conditionAfter || 'BAIK'})`);
 
     return json(result);
   } catch (err: any) {

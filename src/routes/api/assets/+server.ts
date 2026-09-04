@@ -1,5 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
+import { logAction } from '$lib/server/logger';
 
 export const GET: RequestHandler = async ({ url }) => {
   const page = Number(url.searchParams.get('page')) || 1;
@@ -42,7 +43,7 @@ export const GET: RequestHandler = async ({ url }) => {
   }), { status: 200 });
 };
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     const {
       assetCode, serialNumber, name, condition, status, pic,
@@ -53,6 +54,8 @@ export const POST: RequestHandler = async ({ request }) => {
     if (!assetCode || !name) {
       return new Response(JSON.stringify({ error: 'Kode aset dan nama wajib diisi' }), { status: 400 });
     }
+
+    const currentUserId = (userId ? parseInt(userId) : locals.user?.userId) || null;
 
     const asset = await prisma.asset.create({
       data: {
@@ -69,9 +72,13 @@ export const POST: RequestHandler = async ({ request }) => {
         brandId: brandId ? parseInt(brandId) : null,
         locationId: locationId ? parseInt(locationId) : null,
         supplierId: supplierId ? parseInt(supplierId) : null,
-        userId: userId ? parseInt(userId) : null
+        userId: currentUserId
       }
     });
+
+    if (currentUserId) {
+      await logAction(currentUserId, 'TAMBAH_ASET', `Tambah aset baru: ${assetCode} - ${name}`);
+    }
 
     return new Response(JSON.stringify(asset), { status: 201 });
   } catch (err: any) {

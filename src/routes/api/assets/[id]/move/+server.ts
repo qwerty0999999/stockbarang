@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { prisma as db } from '$lib/server/db';
+import { logAction } from '$lib/server/logger';
 import type { RequestEvent } from '@sveltejs/kit';
 
 export async function POST({ request, locals, params }: RequestEvent) {
@@ -17,6 +18,13 @@ export async function POST({ request, locals, params }: RequestEvent) {
     });
 
     if (!asset) return json({ error: 'Aset tidak ditemukan' }, { status: 404 });
+
+    if (asset.status === 'AFKIR') {
+      return json({ error: 'Aset berstatus AFKIR / tidak aktif dan tidak dapat dimutasi' }, { status: 400 });
+    }
+    if (asset.status === 'DIPINJAM') {
+      return json({ error: 'Aset sedang dipinjam. Harap selesaikan pengembalian sebelum melakukan mutasi' }, { status: 400 });
+    }
 
     const fromLocation = asset.location?.name || null;
     const fromPic = asset.pic || null;
@@ -65,6 +73,8 @@ export async function POST({ request, locals, params }: RequestEvent) {
 
       return { movement, asset: updatedAsset };
     });
+
+    await logAction(currentUserId, 'MUTASI_ASET', `Mutasi aset ${asset.assetCode} (${asset.name}) dari [${fromLocation || '-'}] ke [${targetLocationName || '-'}] - PIC: ${nextPic || '-'}`);
 
     return json(result);
   } catch (err: any) {

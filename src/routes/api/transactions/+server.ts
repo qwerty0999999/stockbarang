@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { prisma as db } from '$lib/server/db';
+import { logAction } from '$lib/server/logger';
 import type { RequestEvent } from '@sveltejs/kit';
 
 export async function GET({ locals, url }: RequestEvent) {
@@ -45,8 +46,14 @@ export async function POST({ request, locals }: RequestEvent) {
   }
 
   const quantity = Number(data.quantity);
-  if (isNaN(quantity) || quantity <= 0) {
-    return json({ error: 'Quantity harus angka positif' }, { status: 400 });
+  if (isNaN(quantity)) {
+    return json({ error: 'Quantity harus berupa angka yang valid' }, { status: 400 });
+  }
+  if (data.type !== 'ADJUSTMENT' && quantity <= 0) {
+    return json({ error: 'Quantity barang masuk atau keluar harus lebih dari 0' }, { status: 400 });
+  }
+  if (data.type === 'ADJUSTMENT' && quantity < 0) {
+    return json({ error: 'Nilai stok penyesuaian (adjustment) tidak boleh bernilai negatif' }, { status: 400 });
   }
 
   try {
@@ -82,6 +89,9 @@ export async function POST({ request, locals }: RequestEvent) {
         include: { item: true, user: { select: { username: true } }, supplier: true }
       });
     });
+
+    await logAction(currentUserId, `TRANSAKSI_${data.type}`, `Transaksi ${data.type} ${quantity} unit ${result.item.name} (Stok sekarang: ${result.item.quantity})`);
+
     return json(result);
   } catch (err: any) {
     return json({ error: err.message }, { status: 400 });

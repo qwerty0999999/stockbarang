@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
+import { logAction } from '$lib/server/logger';
 
 const VALID_ROLES = ['admin', 'manajemen', 'staff', 'dev'] as const;
 type Role = (typeof VALID_ROLES)[number];
@@ -38,6 +39,8 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
       select: { id: true, username: true, role: true }
     });
 
+    await logAction(locals.user.userId, 'UBAH_ROLE_USER', `Ubah role user ${user.username} (#${user.id}) menjadi ${user.role}`);
+
     return json(user, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Terjadi kesalahan server';
@@ -55,8 +58,12 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     return json({ error: 'ID tidak valid' }, { status: 400 });
   }
 
+  if (locals.user.userId === id) {
+    return json({ error: 'Tidak dapat menghapus akun Anda sendiri saat sedang aktif digunakan' }, { status: 400 });
+  }
+
   try {
-    const targetUser = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+    const targetUser = await prisma.user.findUnique({ where: { id }, select: { username: true, role: true } });
     if (!targetUser) {
       return json({ error: 'User tidak ditemukan' }, { status: 404 });
     }
@@ -68,6 +75,8 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     await prisma.user.delete({
       where: { id }
     });
+
+    await logAction(locals.user.userId, 'HAPUS_USER', `Hapus user ${targetUser.username} (#${id})`);
 
     return json({ success: true, message: 'User berhasil dihapus' }, { status: 200 });
   } catch (err) {

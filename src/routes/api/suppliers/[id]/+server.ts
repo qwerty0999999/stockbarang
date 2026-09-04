@@ -37,14 +37,18 @@ export async function DELETE({ locals, params }: RequestEvent) {
   const id = parseInt(params.id || '');
   if (isNaN(id)) return json({ error: 'ID tidak valid' }, { status: 400 });
   try {
-    // Check if supplier has transactions or items
-    const transactions = await db.transaction.count({ where: { supplierId: id } });
-    if (transactions > 0) {
-      return json({ error: 'Supplier tidak bisa dihapus karena memiliki transaksi' }, { status: 400 });
-    }
-    const items = await db.item.count({ where: { supplierId: id } });
-    if (items > 0) {
-      return json({ error: 'Supplier tidak bisa dihapus karena memiliki barang' }, { status: 400 });
+    const [transactions, items, assets] = await Promise.all([
+      db.transaction.count({ where: { supplierId: id } }),
+      db.item.count({ where: { supplierId: id } }),
+      db.asset.count({ where: { supplierId: id } })
+    ]);
+    if (transactions > 0 || items > 0 || assets > 0) {
+      const reasons = [
+        transactions > 0 ? `${transactions} riwayat transaksi` : null,
+        items > 0 ? `${items} barang konsumsi` : null,
+        assets > 0 ? `${assets} aset tetap` : null
+      ].filter(Boolean).join(', ');
+      return json({ error: `Supplier tidak bisa dihapus karena masih terkait dengan ${reasons}` }, { status: 400 });
     }
     await db.supplier.delete({ where: { id } });
     return json({ success: true });

@@ -32,10 +32,16 @@ export async function DELETE({ locals, params }: RequestEvent) {
   const id = parseInt(params.id || '');
   if (isNaN(id)) return json({ error: 'ID tidak valid' }, { status: 400 });
   try {
-    // Check if category has items
-    const count = await db.item.count({ where: { categoryId: id } });
-    if (count > 0) {
-      return json({ error: 'Kategori tidak bisa dihapus karena masih memiliki barang' }, { status: 400 });
+    const [itemCount, assetCount] = await Promise.all([
+      db.item.count({ where: { categoryId: id } }),
+      db.asset.count({ where: { categoryId: id } })
+    ]);
+    if (itemCount > 0 || assetCount > 0) {
+      const details = [
+        itemCount > 0 ? `${itemCount} barang konsumsi` : null,
+        assetCount > 0 ? `${assetCount} aset tetap` : null
+      ].filter(Boolean).join(' dan ');
+      return json({ error: `Kategori tidak bisa dihapus karena masih digunakan oleh ${details}` }, { status: 400 });
     }
     await db.category.delete({ where: { id } });
     return json({ success: true });

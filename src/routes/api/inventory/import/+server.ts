@@ -1,5 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
+import { logAction } from '$lib/server/logger';
 import * as xlsx from 'xlsx';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -27,26 +28,42 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		for (const row of data as any[]) {
 			try {
-				if (!row.Name || !row.Price) {
-					errors.push(`Baris ke-${successCount + errors.length + 2}: Nama dan Harga wajib diisi.`);
+				const name = row.Name || row.name || row.NAMA || row.Nama || row['Nama Barang'] || row['nama_barang'];
+				const rawPrice = row.Price ?? row.price ?? row.Harga ?? row.harga ?? row.HARGA ?? row['Harga Barang'] ?? 0;
+				const price = Number(rawPrice);
+
+				if (!name) {
+					errors.push(`Baris ke-${successCount + errors.length + 2}: Nama barang wajib diisi.`);
 					continue;
 				}
 
+				const sku = row.SKU || row.sku || row.Sku || row.Kode || row.kode || null;
+				const quantity = Number(row.Quantity ?? row.quantity ?? row.Jumlah ?? row.jumlah ?? row.Stok ?? row.stok ?? 0);
+				const minStock = Number(row.MinStock ?? row.minStock ?? row['Min Stock'] ?? row.min_stock ?? 5);
+				const location = row.Location || row.location || row.Lokasi || row.lokasi || null;
+				const description = row.Description || row.description || row.Keterangan || row.keterangan || null;
+
 				await prisma.item.create({
 					data: {
-						name: String(row.Name),
-						sku: row.SKU ? String(row.SKU) : null,
-						price: Number(row.Price),
-						quantity: Number(row.Quantity) || 0,
-						minStock: Number(row.MinStock) || 5,
-						description: row.Description ? String(row.Description) : null,
+						name: String(name).trim(),
+						sku: sku ? String(sku).trim() : null,
+						location: location ? String(location).trim() : null,
+						price: isNaN(price) ? 0 : price,
+						quantity: isNaN(quantity) ? 0 : quantity,
+						minStock: isNaN(minStock) ? 5 : minStock,
+						description: description ? String(description).trim() : null,
 						userId: locals.user.userId
 					}
 				});
 				successCount++;
 			} catch (e: any) {
-				errors.push(`Gagal memproses '${row.Name || 'Item'}': ${e.message}`);
+				const itemName = row.Name || row.name || 'Item';
+				errors.push(`Gagal memproses '${itemName}': ${e.message}`);
 			}
+		}
+
+		if (successCount > 0) {
+			await logAction(locals.user.userId, 'IMPORT_EXCEL', `Import ${successCount} data barang via Excel`);
 		}
 
 		return new Response(JSON.stringify({ 

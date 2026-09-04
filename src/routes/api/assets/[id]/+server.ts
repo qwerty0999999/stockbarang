@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { prisma as db } from '$lib/server/db';
+import { logAction } from '$lib/server/logger';
 import type { RequestEvent } from '@sveltejs/kit';
 
 export async function GET({ locals, params }: RequestEvent) {
@@ -84,14 +85,27 @@ export async function DELETE({ locals, params }: RequestEvent) {
   if (isNaN(id)) return json({ error: 'ID tidak valid' }, { status: 400 });
 
   try {
+    const target = await db.asset.findUnique({ where: { id }, select: { assetCode: true, name: true } });
+    if (!target) return json({ error: 'Aset tidak ditemukan' }, { status: 404 });
+
     const activeLoans = await db.loan.count({
       where: { assetId: id, status: 'DIPINJAM' }
     });
     if (activeLoans > 0) {
-      return json({ error: 'Aset tidak dapat dihapus karena sedang dipinjam' }, { status: 400 });
+      return json({ error: 'Aset tidak dapat dihapus karena sedang dalam status peminjaman' }, { status: 400 });
     }
 
-    await db.asset.delete({ where: { id } });
+    await db.$transaction(async (tx) => {
+      // Unlink past returned loans to avoid FK constraint violation
+      await tx.loan.updateMany({
+        where: { assetId: id },
+        data: { assetId: null }
+      });
+      await tx.asset.delete({ where: { id } });
+    });
+
+    await logAction(locals.user.userId, 'HAPUS_ASET', `Hapus aset tetap: ${target.assetCode} - ${target.name}`);
+
     return json({ success: true });
   } catch (err: any) {
     return json({ error: err.message || 'Gagal menghapus aset' }, { status: 500 });

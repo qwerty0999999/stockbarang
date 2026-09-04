@@ -1,5 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
+import { logAction } from '$lib/server/logger';
 
 export const GET: RequestHandler = async ({ url }) => {
   const page = Number(url.searchParams.get('page')) || 1;
@@ -136,6 +137,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
           where: { id: parseInt(itemId) },
           data: { quantity: { decrement: loanQuantity } }
         });
+
+        await tx.transaction.create({
+          data: {
+            type: 'KELUAR',
+            quantity: loanQuantity,
+            note: `Peminjaman ${loanCode} (${borrowerName || 'Tanpa Nama'})`,
+            reference: loanCode,
+            itemId: parseInt(itemId),
+            userId: currentUserId
+          }
+        });
       } else if (assetId) {
         await tx.asset.update({
           where: { id: parseInt(assetId) },
@@ -145,6 +157,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
       return created;
     });
+
+    await logAction(currentUserId, 'PINJAM_BARANG', `Peminjaman ${loanCode}: ${loan.item?.name || loan.asset?.name || ''} untuk ${borrowerName || 'Peminjam'}`);
 
     return new Response(JSON.stringify(loan), { status: 201 });
   } catch (err: any) {

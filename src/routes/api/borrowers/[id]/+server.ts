@@ -39,7 +39,16 @@ export async function DELETE({ locals, params }: RequestEvent) {
     if (activeLoans > 0) {
       return json({ error: 'Data peminjam tidak bisa dihapus karena masih memiliki peminjaman aktif' }, { status: 400 });
     }
-    await db.borrower.delete({ where: { id } });
+
+    await db.$transaction(async (tx) => {
+      // Unlink past returned loans to preserve loan history and prevent FK constraint crash
+      await tx.loan.updateMany({
+        where: { borrowerId: id },
+        data: { borrowerId: null }
+      });
+      await tx.borrower.delete({ where: { id } });
+    });
+
     return json({ success: true });
   } catch (err: any) {
     return json({ error: err.message }, { status: 500 });
