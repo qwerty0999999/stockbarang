@@ -3,6 +3,7 @@
 	import { page, navigating } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
+	import LiveClock from '$lib/components/LiveClock.svelte';
 
 	let { data, children } = $props();
 	let sidebarOpen = $state(false);
@@ -188,6 +189,9 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
 					</svg>
 				</button>
+				<div class="header-clock">
+					<LiveClock variant="header" />
+				</div>
 			</div>
 			
 			<div class="header-right">
@@ -383,6 +387,12 @@
 	.header-left {
 		display: flex;
 		align-items: center;
+		height: 50px;
+	}
+	.header-clock {
+		display: flex;
+		align-items: center;
+		padding-left: 16px;
 	}
 	.hamburger {
 		padding: 16px;
@@ -506,6 +516,9 @@
 		.header-user-name {
 			display: none;
 		}
+		.header-clock {
+			padding-left: 6px;
+		}
 		.logout-text {
 			display: none;
 		}
@@ -536,6 +549,9 @@
 		}
 		.header-right {
 			height: 44px;
+		}
+		.header-clock {
+			padding-left: 2px;
 		}
 	}
 
