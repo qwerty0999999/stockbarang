@@ -48,6 +48,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     const {
       assetCode, serialNumber, name, condition, status, pic,
       purchaseDate, price, description,
+      salvageValue, usefulLifeMonths,
       categoryId, brandId, locationId, supplierId, userId
     } = await request.json();
 
@@ -67,6 +68,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         pic: pic || null,
         purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
         price: price ? parseFloat(price) : null,
+        salvageValue: salvageValue !== undefined ? parseFloat(salvageValue) : 0,
+        usefulLifeMonths: usefulLifeMonths ? parseInt(usefulLifeMonths) : 60,
         description: description || null,
         categoryId: categoryId ? parseInt(categoryId) : null,
         brandId: brandId ? parseInt(brandId) : null,

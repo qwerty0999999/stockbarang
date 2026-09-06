@@ -4,9 +4,31 @@
 	import { Toaster, toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
 	import LiveClock from '$lib/components/LiveClock.svelte';
+	import QuickAssetLookupModal from '$lib/components/QuickAssetLookupModal.svelte';
 
 	let { data, children } = $props();
 	let sidebarOpen = $state(false);
+	let showQuickLookup = $state(false);
+	let checkingAlerts = $state(false);
+
+	async function runAlerts() {
+		checkingAlerts = true;
+		try {
+			const res = await fetch('/api/notifications/run-alerts', { method: 'POST' });
+			const d = await res.json();
+			if (res.ok) {
+				toast.success('Pemeriksaan notifikasi alert selesai!', {
+					description: `H-1 terkirim: ${d.data?.remindersSent || 0} • Overdue diupdate: ${d.data?.overduesUpdated || 0} • Stok kritis: ${d.data?.lowStockCount || 0}`
+				});
+			} else {
+				toast.error(d.error || 'Gagal memeriksa notifikasi alert');
+			}
+		} catch (e: any) {
+			toast.error('Gagal memproses alert');
+		} finally {
+			checkingAlerts = false;
+		}
+	}
 
 	async function logout() {
 		await fetch('/api/auth/logout', { method: 'POST' });
@@ -97,11 +119,37 @@
 				<img src="/img/nav-dashboard.svg" alt="" class="w-4 h-4 nav-icon" />
 				DASHBOARD
 			</a>
+
+			<!-- Permohonan Barang (Self-Service) -->
+			<a href="/inventory/requisitions" onclick={closeSidebar}
+				class="nav-link" class:active={activeRoute.startsWith('/inventory/requisitions')}>
+				<svg class="w-4 h-4 nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+				PERMOHONAN BARANG
+			</a>
 			
+			<a href="/inventory/peminjaman" onclick={closeSidebar}
+				class="nav-link" class:active={activeRoute.startsWith('/inventory/peminjaman')}>
+				<img src="/img/nav-peminjaman.svg" alt="" class="w-4 h-4 nav-icon" />
+				{data.user?.role === 'karyawan' ? 'PINJAMAN SAYA' : 'PEMINJAMAN'}
+			</a>
+
+			<a href="/inventory/bast" onclick={closeSidebar}
+				class="nav-link" class:active={activeRoute.startsWith('/inventory/bast')}>
+				<svg class="w-4 h-4 nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+				BAST DIGITAL
+			</a>
+
+			{#if data.user?.role !== 'karyawan'}
 			<a href="/inventory/assets" onclick={closeSidebar}
 				class="nav-link" class:active={activeRoute.startsWith('/inventory/assets')}>
 				<svg class="w-4 h-4 nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
 				BUKU INDUK ASET
+			</a>
+
+			<a href="/inventory/maintenance" onclick={closeSidebar}
+				class="nav-link" class:active={activeRoute.startsWith('/inventory/maintenance')}>
+				<svg class="w-4 h-4 nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+				PEMELIHARAAN ASET
 			</a>
 
 			<a href="/inventory/items" onclick={closeSidebar}
@@ -109,12 +157,13 @@
 				<img src="/img/nav-items.svg" alt="" class="w-4 h-4 nav-icon" />
 				STOK KONSUMSI
 			</a>
-			
-			<a href="/inventory/peminjaman" onclick={closeSidebar}
-				class="nav-link" class:active={activeRoute.startsWith('/inventory/peminjaman')}>
-				<img src="/img/nav-peminjaman.svg" alt="" class="w-4 h-4 nav-icon" />
-				PEMINJAMAN
+
+			<a href="/inventory/stock-opname" onclick={closeSidebar}
+				class="nav-link" class:active={activeRoute.startsWith('/inventory/stock-opname')}>
+				<svg class="w-4 h-4 nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+				STOCK OPNAME
 			</a>
+			{/if}
 			
 			{#if data.user?.role === 'admin' || data.user?.role === 'dev'}
 			<a href="/inventory/transactions?type=MASUK" onclick={closeSidebar}
@@ -129,6 +178,7 @@
 			</a>
 			{/if}
 
+			{#if data.user?.role !== 'karyawan'}
 			<a href="/inventory/master" onclick={closeSidebar}
 				class="nav-link" class:active={activeRoute.startsWith('/inventory/master')}>
 				<svg class="w-4 h-4 nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
@@ -152,6 +202,7 @@
 				<img src="/img/nav-laporan.svg" alt="" class="w-4 h-4 nav-icon" />
 				LAPORAN
 			</a>
+			{/if}
 			
 			{#if data.user?.role === 'admin' || data.user?.role === 'dev'}
 			<a href="/inventory/admin" onclick={closeSidebar}
@@ -195,6 +246,31 @@
 			</div>
 			
 			<div class="header-right">
+				<!-- Quick Scan Asset Button in Header -->
+				<button
+					type="button"
+					onclick={() => showQuickLookup = true}
+					class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-white/15 hover:bg-white/25 text-white rounded transition mr-2"
+					title="Quick Scan Label Barcode/QR Aset"
+				>
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+					<span class="hidden sm:inline">Scan Aset</span>
+				</button>
+
+				<!-- Run Alert Check Button -->
+				{#if data.user?.role === 'admin' || data.user?.role === 'dev'}
+				<button
+					type="button"
+					onclick={runAlerts}
+					disabled={checkingAlerts}
+					class="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white/15 hover:bg-white/25 text-white rounded transition mr-2 disabled:opacity-50"
+					title="Cek & Picu Notifikasi H-1, Overdue, dan Stok Kritis Sekarang"
+				>
+					<svg class="w-3.5 h-3.5 {checkingAlerts ? 'animate-spin' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+					<span class="hidden sm:inline">Cek Alert</span>
+				</button>
+				{/if}
+
 				<div class="header-user">
 					<div class="header-user-avatar">
 						<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -220,10 +296,14 @@
 		<!-- Footer -->
 		<footer class="app-footer">
 			<div><strong>Copyright &copy; {new Date().getFullYear()} - <a href="https://www.rijalulfikri.my.id/" target="_blank" class="text-[#3c8dbc] hover:underline">RF-Digital</a></strong>. All rights reserved.</div>
-			<div class="footer-version"><b>Version</b> 2.4.0</div>
+			<div class="footer-version"><b>Version</b> 3.0.0 (Enterprise)</div>
 		</footer>
 	</div>
 </div>
+
+{#if showQuickLookup}
+	<QuickAssetLookupModal onClose={() => showQuickLookup = false} />
+{/if}
 
 <style>
 	:global(body) {

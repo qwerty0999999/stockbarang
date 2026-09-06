@@ -39,7 +39,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		countAvailable,
 		countLoaned,
 		countDamaged,
-		totalAssetValue
+		totalAssetValue,
+		countMaintenance
 	] = await Promise.all([
 		prisma.asset.findMany({
 			where,
@@ -61,7 +62,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		prisma.asset.count({ where: { status: 'TERSEDIA' } }),
 		prisma.asset.count({ where: { status: 'DIPINJAM' } }),
 		prisma.asset.count({ where: { condition: { in: ['RUSAK_RINGAN', 'RUSAK_BERAT', 'HILANG'] } } }),
-		prisma.asset.aggregate({ _sum: { price: true } })
+		prisma.asset.aggregate({ _sum: { price: true } }),
+		prisma.asset.count({ where: { status: 'UNDER_MAINTENANCE' } })
 	]);
 
 	return {
@@ -75,6 +77,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			countAvailable,
 			countLoaned,
 			countDamaged,
+			countMaintenance,
 			totalAssetValue: totalAssetValue._sum.price ?? 0
 		},
 		pagination: {

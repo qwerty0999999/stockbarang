@@ -160,6 +160,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     await logAction(currentUserId, 'PINJAM_BARANG', `Peminjaman ${loanCode}: ${loan.item?.name || loan.asset?.name || ''} untuk ${borrowerName || 'Peminjam'}`);
 
+    // Trigger WhatsApp notification asynchronously
+    import('$lib/server/notifications').then(({ notifyLoanCreated }) => {
+      notifyLoanCreated(loan, loan.borrower).catch((e: any) => console.error('Failed to notify loan created', e));
+    });
+
     return new Response(JSON.stringify(loan), { status: 201 });
   } catch (err: any) {
     if (err.code === 'P2002') {

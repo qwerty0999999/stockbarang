@@ -22,6 +22,12 @@ model User {
   assets        Asset[]
   logs          Log[]
   assetMovements AssetMovement[]
+  
+  auditedOpnames       StockOpname[]       @relation("AuditorOpnames")
+  approvedOpnames      StockOpname[]       @relation("ApprovedOpnames")
+  performedMaintenances AssetMaintenance[] @relation("MaintenancePerformed")
+  requisitions         Requisition[]       @relation("UserRequisitions")
+  approvedRequisitions Requisition[]       @relation("ApprovedRequisitions")
 }
 
 model Location {
@@ -29,6 +35,7 @@ model Location {
   name          String        @unique
   description   String?
   assets        Asset[]
+  stockOpnames  StockOpname[]
   createdAt     DateTime      @default(now())
 }
 
@@ -50,6 +57,7 @@ model Category {
   description   String?
   items         Item[]
   assets        Asset[]
+  stockOpnames  StockOpname[]
   createdAt     DateTime      @default(now())
 }
 
@@ -94,6 +102,9 @@ model Item {
   userId        Int?
   user          User?         @relation(fields: [userId], references: [id])
 
+  stockOpnameItems StockOpnameItem[]
+  requisitionItems RequisitionItem[]
+
   @@index([categoryId])
   @@index([createdAt])
 }
@@ -104,10 +115,12 @@ model Asset {
   serialNumber  String?
   name          String
   condition     String        @default("BAIK") // BAIK, RUSAK_RINGAN, RUSAK_BERAT, HILANG
-  status        String        @default("TERSEDIA") // TERSEDIA, DIPINJAM, MUTASI, AFKIR
+  status        String        @default("TERSEDIA") // TERSEDIA, DIPINJAM, MUTASI, AFKIR, UNDER_MAINTENANCE
   pic           String?
   purchaseDate  DateTime?
   price         Float?
+  salvageValue  Float?        @default(0)
+  usefulLifeMonths Int?       @default(60) // Masa manfaat default 5 tahun (60 bulan)
   description   String?
   
   categoryId    Int?
@@ -123,6 +136,8 @@ model Asset {
   
   loans         Loan[]
   movements     AssetMovement[]
+  maintenances  AssetMaintenance[]
+  requisitionItems RequisitionItem[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -202,6 +217,7 @@ model Loan {
   userId              Int       // Petugas yang mencatat
   user                User      @relation(fields: [userId], references: [id])
   
+  handoverDocuments   HandoverDocument[]
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -210,4 +226,131 @@ model Loan {
   @@index([itemId])
   @@index([assetId])
   @@index([createdAt])
+}
+
+model StockOpname {
+  id            Int               @id @default(autoincrement())
+  opnameCode    String            @unique
+  title         String
+  date          DateTime          @default(now())
+  status        String            @default("DRAFT") // DRAFT, IN_PROGRESS, COMPLETED, ADJUSTED
+  locationId    Int?
+  location      Location?         @relation(fields: [locationId], references: [id])
+  categoryId    Int?
+  category      Category?         @relation(fields: [categoryId], references: [id])
+  notes         String?
+  totalItems    Int               @default(0)
+  totalVariance Int               @default(0)
+  auditorId     Int
+  auditor       User              @relation("AuditorOpnames", fields: [auditorId], references: [id])
+  approvedById  Int?
+  approvedBy    User?             @relation("ApprovedOpnames", fields: [approvedById], references: [id])
+  approvedAt    DateTime?
+  items         StockOpnameItem[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([status])
+  @@index([date])
+}
+
+model StockOpnameItem {
+  id           Int         @id @default(autoincrement())
+  opnameId     Int
+  opname       StockOpname @relation(fields: [opnameId], references: [id], onDelete: Cascade)
+  itemId       Int
+  item         Item        @relation(fields: [itemId], references: [id])
+  systemQty    Int
+  physicalQty  Int
+  variance     Int         @default(0) // physicalQty - systemQty
+  reason       String?
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([opnameId])
+  @@index([itemId])
+}
+
+model AssetMaintenance {
+  id              Int       @id @default(autoincrement())
+  maintenanceCode String    @unique
+  assetId         Int
+  asset           Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  maintenanceDate DateTime  @default(now())
+  completionDate  DateTime?
+  type            String    @default("RUTIN") // RUTIN, PERBAIKAN, INSPEKSI
+  status          String    @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+  cost            Float     @default(0)
+  invoiceNumber   String?
+  vendor          String?
+  technician      String?
+  description     String?
+  resultNotes     String?
+  performedById   Int?
+  performedBy     User?     @relation("MaintenancePerformed", fields: [performedById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([assetId])
+  @@index([status])
+  @@index([maintenanceDate])
+}
+
+model Requisition {
+  id              Int               @id @default(autoincrement())
+  requisitionCode String            @unique
+  requesterId     Int
+  requester       User              @relation("UserRequisitions", fields: [requesterId], references: [id])
+  type            String            @default("CONSUMABLE") // CONSUMABLE, ASSET_LOAN
+  reason          String
+  department      String?
+  status          String            @default("PENDING_APPROVAL") // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, COMPLETED
+  neededDate      DateTime?
+  approvedById    Int?
+  approvedBy      User?             @relation("ApprovedRequisitions", fields: [approvedById], references: [id])
+  approvalNotes   String?
+  approvedAt      DateTime?
+  items           RequisitionItem[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([status])
+  @@index([requesterId])
+  @@index([createdAt])
+}
+
+model RequisitionItem {
+  id            Int         @id @default(autoincrement())
+  requisitionId Int
+  requisition   Requisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  itemId        Int?
+  item          Item?       @relation(fields: [itemId], references: [id])
+  assetId       Int?
+  asset         Asset?      @relation(fields: [assetId], references: [id])
+  quantity      Int         @default(1)
+  notes         String?
+
+  @@index([requisitionId])
+}
+
+model HandoverDocument {
+  id                  Int       @id @default(autoincrement())
+  documentNumber      String    @unique
+  loanId              Int?
+  loan                Loan?     @relation(fields: [loanId], references: [id])
+  title               String
+  handoverDate        DateTime  @default(now())
+  firstPartyName      String    // Pihak Pertama (Menyerahkan)
+  firstPartyRole      String?
+  firstPartySignature String?   @db.Text
+  secondPartyName     String    // Pihak Kedua (Menerima)
+  secondPartyRole     String?
+  secondPartySignature String?  @db.Text
+  notes               String?
+  status              String    @default("COMPLETED")
+  createdAt           DateTime  @default(now())
+
+  @@index([loanId])
+  @@index([documentNumber])
 }

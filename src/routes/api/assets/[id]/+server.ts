@@ -59,6 +59,8 @@ export async function PUT({ request, locals, params }: RequestEvent) {
         pic: data.pic !== undefined ? (data.pic || null) : existing.pic,
         purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : (data.purchaseDate === null ? null : existing.purchaseDate),
         price: data.price !== undefined ? (data.price ? parseFloat(data.price) : null) : existing.price,
+        salvageValue: data.salvageValue !== undefined ? (data.salvageValue ? parseFloat(data.salvageValue) : 0) : existing.salvageValue,
+        usefulLifeMonths: data.usefulLifeMonths !== undefined ? (data.usefulLifeMonths ? parseInt(data.usefulLifeMonths) : 60) : existing.usefulLifeMonths,
         description: data.description !== undefined ? (data.description || null) : existing.description,
         categoryId: data.categoryId !== undefined ? (data.categoryId ? parseInt(data.categoryId) : null) : existing.categoryId,
         brandId: data.brandId !== undefined ? (data.brandId ? parseInt(data.brandId) : null) : existing.brandId,

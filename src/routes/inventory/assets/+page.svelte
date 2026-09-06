@@ -5,6 +5,8 @@
 	import { jsPDF } from 'jspdf';
 	import autoTable from 'jspdf-autotable';
 	import * as XLSX from 'xlsx';
+	import { calculateStraightLineDepreciation, formatRupiah } from '$lib/depreciation';
+	import QuickAssetLookupModal from '$lib/components/QuickAssetLookupModal.svelte';
 
 	let { data } = $props();
 	let assets = $derived(data.assets);
@@ -67,6 +69,11 @@
 	let loading = $state(false);
 	let error = $state('');
 
+	// Quick Lookup & Depreciation Modal States
+	let showQuickLookup = $state(false);
+	let showDepreciationModal = $state(false);
+	let activeDepAsset = $state<any>(null);
+
 	let form = $state({
 		assetCode: '',
 		serialNumber: '',
@@ -76,6 +83,8 @@
 		pic: '',
 		purchaseDate: '',
 		price: 0,
+		salvageValue: 0,
+		usefulLifeMonths: 60,
 		description: '',
 		categoryId: '',
 		brandId: '',
@@ -94,6 +103,8 @@
 			pic: '',
 			purchaseDate: new Date().toISOString().split('T')[0],
 			price: 0,
+			salvageValue: 0,
+			usefulLifeMonths: 60,
 			description: '',
 			categoryId: '',
 			brandId: '',
@@ -115,6 +126,8 @@
 			pic: asset.pic || '',
 			purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : '',
 			price: asset.price || 0,
+			salvageValue: asset.salvageValue || 0,
+			usefulLifeMonths: asset.usefulLifeMonths || 60,
 			description: asset.description || '',
 			categoryId: asset.categoryId ? asset.categoryId.toString() : '',
 			brandId: asset.brandId ? asset.brandId.toString() : '',
@@ -123,6 +136,11 @@
 		};
 		error = '';
 		showModal = true;
+	}
+
+	function openDepreciationModal(asset: any) {
+		activeDepAsset = asset;
+		showDepreciationModal = true;
 	}
 
 	async function save(e: Event) {
@@ -135,6 +153,8 @@
 		const payload: any = {
 			...form,
 			price: form.price ? parseFloat(form.price.toString()) : null,
+			salvageValue: form.salvageValue ? parseFloat(form.salvageValue.toString()) : 0,
+			usefulLifeMonths: form.usefulLifeMonths ? parseInt(form.usefulLifeMonths.toString()) : 60,
 			purchaseDate: form.purchaseDate ? new Date(form.purchaseDate).toISOString() : null,
 			categoryId: form.categoryId ? parseInt(form.categoryId) : null,
 			brandId: form.brandId ? parseInt(form.brandId) : null,
@@ -241,11 +261,6 @@
 		detailLoading = false;
 	}
 
-	function formatRupiah(n: number | null | undefined) {
-		if (!n) return 'Rp 0';
-		return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
-	}
-
 	function formatDate(d: string | Date | null | undefined) {
 		if (!d) return '-';
 		return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -335,34 +350,41 @@
 	</div>
 
 	<!-- KPI Summary Widgets AdminLTE Style -->
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-		<div class="bg-[#00C0EF] text-white p-4 rounded-none shadow-sm flex items-center justify-between">
+	<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+		<div class="bg-[#00C0EF] text-white p-3.5 rounded-none shadow-sm flex items-center justify-between">
 			<div>
 				<div class="text-2xl font-bold">{stats.total}</div>
-				<div class="text-xs uppercase font-semibold">Total Unit Aset</div>
+				<div class="text-[11px] uppercase font-semibold">Total Unit Aset</div>
 			</div>
-			<svg class="w-10 h-10 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+			<svg class="w-8 h-8 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
 		</div>
-		<div class="bg-[#00A65A] text-white p-4 rounded-none shadow-sm flex items-center justify-between">
+		<div class="bg-[#00A65A] text-white p-3.5 rounded-none shadow-sm flex items-center justify-between">
 			<div>
 				<div class="text-2xl font-bold">{stats.countAvailable}</div>
-				<div class="text-xs uppercase font-semibold">Aset Tersedia</div>
+				<div class="text-[11px] uppercase font-semibold">Aset Tersedia</div>
 			</div>
-			<svg class="w-10 h-10 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+			<svg class="w-8 h-8 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
 		</div>
-		<div class="bg-[#F39C12] text-white p-4 rounded-none shadow-sm flex items-center justify-between">
+		<div class="bg-[#F39C12] text-white p-3.5 rounded-none shadow-sm flex items-center justify-between">
 			<div>
 				<div class="text-2xl font-bold">{stats.countLoaned}</div>
-				<div class="text-xs uppercase font-semibold">Sedang Dipinjam</div>
+				<div class="text-[11px] uppercase font-semibold">Sedang Dipinjam</div>
 			</div>
-			<svg class="w-10 h-10 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+			<svg class="w-8 h-8 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
 		</div>
-		<div class="bg-[#DD4B39] text-white p-4 rounded-none shadow-sm flex items-center justify-between">
+		<div class="bg-amber-600 text-white p-3.5 rounded-none shadow-sm flex items-center justify-between">
+			<div>
+				<div class="text-2xl font-bold">{stats.countMaintenance || 0}</div>
+				<div class="text-[11px] uppercase font-semibold">Under Maintenance</div>
+			</div>
+			<svg class="w-8 h-8 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+		</div>
+		<div class="bg-[#DD4B39] text-white p-3.5 rounded-none shadow-sm flex items-center justify-between col-span-2 sm:col-span-1">
 			<div>
 				<div class="text-2xl font-bold">{stats.countDamaged}</div>
-				<div class="text-xs uppercase font-semibold">Rusak / Hilang</div>
+				<div class="text-[11px] uppercase font-semibold">Rusak / Hilang</div>
 			</div>
-			<svg class="w-10 h-10 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+			<svg class="w-8 h-8 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
 		</div>
 	</div>
 
@@ -370,10 +392,14 @@
 	<div class="bg-white shadow rounded-none border-t-4 border-[#3C8DBC]">
 		<!-- Header Actions -->
 		<div class="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
-			<div class="flex items-center gap-2">
+			<div class="flex flex-wrap items-center gap-2">
 				<button onclick={openAdd} class="bg-[#3CA2E0] hover:bg-[#3692CA] text-white px-3 py-1.5 text-xs font-semibold rounded-sm shadow-sm flex items-center gap-1 transition-colors">
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
 					Catat Aset Baru
+				</button>
+				<button onclick={() => showQuickLookup = true} class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-xs font-semibold rounded-sm shadow-sm flex items-center gap-1 transition-colors">
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+					Quick Scan Aset
 				</button>
 				<button onclick={exportExcel} class="bg-[#00A65A] hover:bg-[#008D4C] text-white px-3 py-1.5 text-xs font-semibold rounded-sm shadow-sm flex items-center gap-1 transition-colors">
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -431,6 +457,7 @@
 					<option value="">Semua Status</option>
 					<option value="TERSEDIA">Tersedia</option>
 					<option value="DIPINJAM">Dipinjam</option>
+					<option value="UNDER_MAINTENANCE">Under Maintenance</option>
 					<option value="MUTASI">Mutasi</option>
 					<option value="AFKIR">Afkir</option>
 				</select>
@@ -454,6 +481,7 @@
 							<th class="p-2.5 font-bold border-r border-gray-200">KATEGORI / MEREK</th>
 							<th class="p-2.5 font-bold border-r border-gray-200">LOKASI / RUANGAN</th>
 							<th class="p-2.5 font-bold border-r border-gray-200">PENANGGUNG JAWAB (PIC)</th>
+							<th class="p-2.5 text-right font-bold border-r border-gray-200">NILAI BUKU KINI</th>
 							<th class="p-2.5 text-center font-bold border-r border-gray-200">KONDISI</th>
 							<th class="p-2.5 text-center font-bold border-r border-gray-200">STATUS</th>
 							<th class="p-2.5 text-center font-bold">AKSI</th>
@@ -461,6 +489,7 @@
 					</thead>
 					<tbody class="divide-y divide-gray-200">
 						{#each assets as asset, idx}
+							{@const dep = calculateStraightLineDepreciation(asset.price, asset.salvageValue, asset.usefulLifeMonths, asset.purchaseDate)}
 							<tr class="hover:bg-gray-50 transition-colors">
 								<td class="p-2.5 text-center text-gray-500 border-r border-gray-100">
 									{((pagination.page - 1) * pagination.limit) + idx + 1}
@@ -485,6 +514,10 @@
 								<td class="p-2.5 text-xs border-r border-gray-100 text-gray-700">
 									{asset.pic || '-'}
 								</td>
+								<td class="p-2.5 text-right border-r border-gray-100">
+									<span class="font-bold text-xs text-emerald-700 font-mono block">{formatRupiah(dep.currentBookValue)}</span>
+									<span class="text-[10px] text-gray-400 block font-mono">Susut: {formatRupiah(dep.accumulatedDepreciation)}</span>
+								</td>
 								<td class="p-2.5 text-center border-r border-gray-100">
 									{#if asset.condition === 'BAIK'}
 										<span class="inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-green-100 text-green-800">BAIK</span>
@@ -501,6 +534,8 @@
 										<span class="inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-600 text-white">TERSEDIA</span>
 									{:else if asset.status === 'DIPINJAM'}
 										<span class="inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-blue-600 text-white">DIPINJAM</span>
+									{:else if asset.status === 'UNDER_MAINTENANCE'}
+										<span class="inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500 text-white">MAINTENANCE</span>
 									{:else if asset.status === 'MUTASI'}
 										<span class="inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-purple-600 text-white">MUTASI</span>
 									{:else}
@@ -509,6 +544,10 @@
 								</td>
 								<td class="p-2.5 text-center">
 									<div class="flex items-center justify-center gap-1">
+										<!-- Tombol Hitung Depresiasi & Servis -->
+										<button onclick={() => openDepreciationModal(asset)} title="Kalkulator Depresiasi & Valuasi" class="text-indigo-600 hover:text-indigo-800 p-1">
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+										</button>
 										<!-- Tombol Mutasi Perpindahan -->
 										<button onclick={() => openMove(asset)} title="Mutasi / Pindah Lokasi & PIC" class="text-purple-600 hover:text-purple-800 p-1">
 											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
@@ -646,6 +685,17 @@
 					</div>
 				</div>
 
+				<div class="grid grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded border border-slate-200">
+					<div>
+						<label for="salvageValue" class="block text-[11px] font-bold text-gray-700 mb-1">Nilai Sisa / Residu (Rp)</label>
+						<input id="salvageValue" type="number" bind:value={form.salvageValue} min="0" placeholder="0" class="w-full border border-gray-300 px-2.5 py-1 text-xs focus:outline-none focus:border-[#3C8DBC] rounded-sm bg-white" />
+					</div>
+					<div>
+						<label for="usefulLifeMonths" class="block text-[11px] font-bold text-gray-700 mb-1">Masa Manfaat (Bulan)</label>
+						<input id="usefulLifeMonths" type="number" bind:value={form.usefulLifeMonths} min="1" placeholder="60 (5 tahun)" class="w-full border border-gray-300 px-2.5 py-1 text-xs focus:outline-none focus:border-[#3C8DBC] rounded-sm bg-white" />
+					</div>
+				</div>
+
 				<div class="grid grid-cols-2 gap-3">
 					<div>
 						<label for="condition" class="block text-xs font-bold text-gray-700 mb-1">Kondisi Fisik Aset</label>
@@ -661,6 +711,7 @@
 						<select id="status" bind:value={form.status} class="w-full border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm bg-white font-semibold">
 							<option value="TERSEDIA">Tersedia</option>
 							<option value="DIPINJAM">Dipinjam</option>
+							<option value="UNDER_MAINTENANCE">Dalam Pemeliharaan (UNDER_MAINTENANCE)</option>
 							<option value="MUTASI">Mutasi</option>
 							<option value="AFKIR">Afkir</option>
 						</select>
@@ -875,6 +926,103 @@
 				<button type="button" onclick={() => showDetailModal = false} class="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-semibold rounded-sm">
 					Tutup
 				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- MODAL QUICK ASSET LOOKUP -->
+{#if showQuickLookup}
+	<QuickAssetLookupModal onClose={() => showQuickLookup = false} />
+{/if}
+
+<!-- MODAL RINCIAN DEPRESIASI & VALUASI ASET -->
+{#if showDepreciationModal && activeDepAsset}
+	{@const dep = calculateStraightLineDepreciation(activeDepAsset.price, activeDepAsset.salvageValue, activeDepAsset.usefulLifeMonths, activeDepAsset.purchaseDate)}
+	<div class="fixed inset-0 bg-black/60 flex items-center justify-center z-[1050] p-4 backdrop-blur-sm">
+		<div class="bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-150">
+			<div class="bg-indigo-700 px-5 py-3.5 flex items-center justify-between text-white">
+				<div class="flex items-center gap-2">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+					<h4 class="font-bold text-sm">Kalkulator Depresiasi Garis Lurus (Straight-Line)</h4>
+				</div>
+				<button type="button" aria-label="Close" onclick={() => showDepreciationModal = false} class="text-white hover:text-gray-200">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+				</button>
+			</div>
+
+			<div class="p-5 space-y-4 text-xs text-gray-700">
+				<!-- Asset Summary -->
+				<div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+					<span class="font-mono text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">{activeDepAsset.assetCode}</span>
+					<h3 class="font-bold text-base text-gray-900 mt-1">{activeDepAsset.name}</h3>
+					<p class="text-gray-500 text-xs">
+						Tanggal Perolehan: <strong>{activeDepAsset.purchaseDate ? formatDate(activeDepAsset.purchaseDate) : 'Belum diatur'}</strong>
+					</p>
+				</div>
+
+				<!-- Parameters Grid -->
+				<div class="grid grid-cols-2 gap-2.5">
+					<div class="p-2.5 bg-gray-50 rounded border border-gray-100">
+						<span class="text-gray-400 block text-[11px]">Harga Perolehan (Cost)</span>
+						<span class="font-bold text-sm text-gray-800">{formatRupiah(dep.initialCost)}</span>
+					</div>
+					<div class="p-2.5 bg-gray-50 rounded border border-gray-100">
+						<span class="text-gray-400 block text-[11px]">Nilai Sisa (Salvage Value)</span>
+						<span class="font-bold text-sm text-gray-800">{formatRupiah(dep.salvageValue)}</span>
+					</div>
+					<div class="p-2.5 bg-gray-50 rounded border border-gray-100">
+						<span class="text-gray-400 block text-[11px]">Masa Manfaat</span>
+						<span class="font-bold text-sm text-gray-800">{dep.usefulLifeMonths} Bulan ({dep.usefulLifeYears} Thn)</span>
+					</div>
+					<div class="p-2.5 bg-gray-50 rounded border border-gray-100">
+						<span class="text-gray-400 block text-[11px]">Penyusutan / Bulan</span>
+						<span class="font-bold text-sm text-indigo-600">{formatRupiah(dep.monthlyDepreciation)}</span>
+					</div>
+				</div>
+
+				<!-- Valuation Card -->
+				<div class="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl space-y-3">
+					<div class="flex justify-between items-center">
+						<span class="font-bold text-gray-700 uppercase tracking-wide text-xs">Nilai Buku Saat Ini (Current Book Value)</span>
+						<span class="font-bold text-lg text-emerald-700 font-mono">{formatRupiah(dep.currentBookValue)}</span>
+					</div>
+
+					<div class="flex justify-between items-center text-xs">
+						<span class="text-gray-500">Akumulasi Penyusutan:</span>
+						<span class="font-bold text-rose-600 font-mono">-{formatRupiah(dep.accumulatedDepreciation)}</span>
+					</div>
+
+					<!-- Progress bar -->
+					<div>
+						<div class="flex justify-between text-[11px] text-gray-500 mb-1">
+							<span>Penyusutan: {dep.depreciationPercentage}%</span>
+							<span>Umur: {dep.monthsUsed} / {dep.usefulLifeMonths} Bln</span>
+						</div>
+						<div class="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+							<div class="h-full bg-indigo-600 rounded-full transition-all" style="width: {dep.depreciationPercentage}%"></div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Navigation to maintenance -->
+				<div class="pt-2 flex justify-between items-center">
+					<a
+						href={`/inventory/maintenance?search=${activeDepAsset.assetCode}`}
+						class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 hover:underline"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+						Lihat Riwayat Pemeliharaan & Servis Aset Ini &rarr;
+					</a>
+
+					<button
+						type="button"
+						onclick={() => showDepreciationModal = false}
+						class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded text-xs transition"
+					>
+						Tutup
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>

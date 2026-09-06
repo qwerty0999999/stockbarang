@@ -3,7 +3,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
 import { logAction } from '$lib/server/logger';
 
-const VALID_ROLES = ['admin', 'manajemen', 'staff', 'dev'] as const;
+const VALID_ROLES = ['admin', 'manajemen', 'staff', 'karyawan', 'dev'] as const;
 type Role = (typeof VALID_ROLES)[number];
 
 export const PATCH: RequestHandler = async ({ params, request, locals }) => {

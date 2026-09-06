@@ -4,6 +4,7 @@
 	import { jsPDF } from 'jspdf';
 	import autoTable from 'jspdf-autotable';
 	import * as XLSX from 'xlsx';
+	import BarcodeScanner from '$lib/components/BarcodeScanner.svelte';
 
 	let { data } = $props();
 	let loans = $derived(data.loans);
@@ -14,6 +15,8 @@
 
 	let showModal = $state(false);
 	let showReturnModal = $state(false);
+	let showScannerReturn = $state(false);
+	let showScannerLoanItem = $state(false);
 	let selectedLoanToReturn: any = $state(null);
 	let loading = $state(false);
 	let error = $state('');
@@ -66,6 +69,64 @@
 			notes: ''
 		};
 		showReturnModal = true;
+	}
+
+	function handleScanReturn(code: string) {
+		const q = code.trim().toLowerCase();
+		// Cari di daftar peminjaman yang aktif / belum kembali
+		const activeLoans = loans.filter((l: any) => l.status !== 'DIKEMBALIKAN');
+		const match = activeLoans.find((l: any) => {
+			return (
+				l.loanCode?.toLowerCase() === q ||
+				l.asset?.assetCode?.toLowerCase() === q ||
+				l.asset?.serialNumber?.toLowerCase() === q ||
+				l.item?.sku?.toLowerCase() === q ||
+				l.item?.barcode?.toLowerCase() === q
+			);
+		});
+
+		if (match) {
+			showScannerReturn = false;
+			toast.success(`Ditemukan peminjaman: ${match.loanCode} (${match.borrower?.name || match.borrowerName || 'Peminjam'})`);
+			openReturnModal(match);
+		} else {
+			toast.error(`Tidak ditemukan peminjaman aktif untuk kode/barcode "${code}"`);
+		}
+	}
+
+	function handleScanLoanItem(code: string) {
+		const q = code.trim().toLowerCase();
+		// 1. Cek di daftar aset
+		const foundAsset = assets.find((a: any) => 
+			a.assetCode?.toLowerCase() === q || 
+			a.serialNumber?.toLowerCase() === q ||
+			a.name?.toLowerCase() === q
+		);
+		if (foundAsset) {
+			targetType = 'asset';
+			form.targetType = 'asset';
+			form.assetId = foundAsset.id.toString();
+			showScannerLoanItem = false;
+			toast.success(`Aset terpilih: ${foundAsset.name} [${foundAsset.assetCode}]`);
+			return;
+		}
+
+		// 2. Cek di daftar barang konsumsi
+		const foundItem = items.find((i: any) => 
+			i.sku?.toLowerCase() === q || 
+			i.barcode?.toLowerCase() === q ||
+			i.name?.toLowerCase() === q
+		);
+		if (foundItem) {
+			targetType = 'item';
+			form.targetType = 'item';
+			form.itemId = foundItem.id.toString();
+			showScannerLoanItem = false;
+			toast.success(`Barang terpilih: ${foundItem.name}`);
+			return;
+		}
+
+		toast.error(`Barcode "${code}" tidak ditemukan pada aset maupun barang yang tersedia.`);
 	}
 
 	async function saveLoan(e: Event) {
@@ -309,6 +370,10 @@
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
 					Catat Peminjaman
 				</button>
+				<button onclick={() => showScannerReturn = true} class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-xs font-semibold rounded-sm shadow-sm flex items-center gap-1.5 transition-colors" title="Scan Barcode / QR untuk Pengembalian Cepat">
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+					Scan Kembali Cepat
+				</button>
 				<button onclick={exportExcel} class="bg-[#00A65A] hover:bg-[#008D4C] text-white px-3 py-1.5 text-xs font-semibold rounded-sm shadow-sm flex items-center gap-1 transition-colors">
 					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
 					Export Excel
@@ -443,6 +508,9 @@
 												Kembalikan
 											</button>
 										{/if}
+										<a href="/inventory/bast?loanId={l.id}" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 text-xs font-semibold rounded-sm shadow-sm flex items-center gap-0.5" title="Terbitkan Berita Acara Serah Terima (BAST)">
+											BAST
+										</a>
 										<button onclick={() => hapus(l.id)} title="Hapus Data" aria-label="Hapus Peminjaman" class="text-red-600 hover:text-red-800 p-1">
 											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
 										</button>
@@ -515,7 +583,13 @@
 
 				{#if targetType === 'asset'}
 					<div>
-						<label for="assetId" class="block text-xs font-bold text-gray-700 mb-1">Pilih Unit Aset Tersedia *</label>
+						<div class="flex items-center justify-between mb-1">
+							<label for="assetId" class="block text-xs font-bold text-gray-700">Pilih Unit Aset Tersedia *</label>
+							<button type="button" onclick={() => showScannerLoanItem = true} class="text-xs text-[#3C8DBC] hover:underline flex items-center gap-1 font-semibold">
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+								Scan Barcode Aset
+							</button>
+						</div>
 						<select id="assetId" bind:value={form.assetId} required class="w-full border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm bg-white">
 							{#each assets as a}
 								<option value={a.id.toString()}>{a.name} [{a.assetCode}] - Kondisi: {a.condition}</option>
@@ -526,7 +600,13 @@
 					</div>
 				{:else}
 					<div>
-						<label for="itemId" class="block text-xs font-bold text-gray-700 mb-1">Pilih Barang Konsumsi *</label>
+						<div class="flex items-center justify-between mb-1">
+							<label for="itemId" class="block text-xs font-bold text-gray-700">Pilih Barang Konsumsi *</label>
+							<button type="button" onclick={() => showScannerLoanItem = true} class="text-xs text-[#3C8DBC] hover:underline flex items-center gap-1 font-semibold">
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+								Scan Barcode Barang
+							</button>
+						</div>
 						<select id="itemId" bind:value={form.itemId} required class="w-full border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-[#3C8DBC] rounded-sm bg-white">
 							{#each items as i}
 								<option value={i.id.toString()}>{i.name} (Tersedia: {i.quantity})</option>
@@ -618,4 +698,20 @@
 			</form>
 		</div>
 	</div>
+{/if}
+
+<!-- MODAL SCANNER PENGEMBALIAN CEPAT -->
+{#if showScannerReturn}
+	<BarcodeScanner 
+		onScan={handleScanReturn} 
+		onClose={() => showScannerReturn = false} 
+	/>
+{/if}
+
+<!-- MODAL SCANNER INPUT BARANG / ASET PEMINJAMAN -->
+{#if showScannerLoanItem}
+	<BarcodeScanner 
+		onScan={handleScanLoanItem} 
+		onClose={() => showScannerLoanItem = false} 
+	/>
 {/if}

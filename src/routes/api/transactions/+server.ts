@@ -92,6 +92,13 @@ export async function POST({ request, locals }: RequestEvent) {
 
     await logAction(currentUserId, `TRANSAKSI_${data.type}`, `Transaksi ${data.type} ${quantity} unit ${result.item.name} (Stok sekarang: ${result.item.quantity})`);
 
+    // Check for low stock notification
+    if (data.type === 'KELUAR' && result.item.quantity <= result.item.minStock) {
+      import('$lib/server/notifications').then(({ notifyLowStockAlert }) => {
+        notifyLowStockAlert([result.item]).catch((e: any) => console.error('Failed to notify low stock', e));
+      });
+    }
+
     return json(result);
   } catch (err: any) {
     return json({ error: err.message }, { status: 400 });
